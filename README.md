@@ -1,27 +1,65 @@
 # FitQuest Frontend
 
-FitQuest is a playful, mobile-first AI fitness coach app for personalized daily workout quests. The product turns training into a lightweight, game-like flow: users register, set up a training profile, generate an AI workout plan, adjust the plan, start a guided workout, and save completed sessions as training history.
+FitQuest is a mobile-first AI fitness coach app that turns daily training into a lightweight quest flow. Instead of behaving like a traditional workout tracker, the app speaks from the perspective of a coach: it helps users set up a training profile, plans the week, generates a workout for the day, guides the session, and records completed training.
 
-The interface uses a friendly coach-like tone and a daily quest structure, so the app feels more like training with an AI coach than managing a traditional workout tracker.
+The current frontend focuses on the core experience: authentication, onboarding, AI-assisted planning, editable workout plans, guided training, automatic workout saving, and read-only training history.
+
+## Product Highlights
+
+- Coach-like product voice across the app
+- Game-inspired weekly training map
+- Animated stick-figure coach system for onboarding, weekly plans, workout categories, and completion feedback
+- AI-generated temporary plans that are not saved as history until the user finishes training
+- Local draft handling so an unfinished daily plan can be revisited
+- Bilingual interface support for Chinese and English
+- Mobile-first layout with Vercel-friendly SPA routing
+
+## Core Flow
+
+```text
+register / login
+-> onboarding profile
+-> weekly training map
+-> generate today's plan
+-> edit or adjust plan
+-> guided workout
+-> auto-save completed session
+-> read-only training history
+```
+
+AI-generated plans are treated as temporary drafts. A generated plan does not become a training record until the user completes the workout. This keeps planning and history separate, which is important for avoiding false training records.
 
 ## Features
 
 - Email/password registration and login
-- New-user onboarding for training profile setup
+- New-user onboarding with training profile setup
 - Profile fields for experience level, goal, gender, height, and weight
-- Weekly training map with completed sessions and upcoming training guidance
-- AI-generated temporary workout plans
-- Plan adjustment actions for low energy, shorter time, higher intensity, and exercise swaps
-- Editable workout plans before training:
+- Weekly plan view with completed sessions, recovery days, and planned training days
+- Cached weekly plan handling to avoid regenerating the same week every time the page opens
+- AI-generated daily workout plans
+- Plan adjustments for low energy, shorter time, higher intensity, and exercise swaps
+- Editable workout plan before training:
   - reorder exercises
   - edit sets and reps
   - edit weighted movements
   - keep bodyweight movements weight-locked
 - Guided workout mode with set progression and rest countdowns
-- Save completed workouts as training history
+- Automatic save after workout completion
 - Read-only training history and session detail pages
 - Settings page for profile updates, language preference, and logout
-- Local draft handling for unsaved daily plans
+- Local cleanup for drafts and cached plans when the user logs out, changes profile, or changes language
+
+## UI Direction
+
+FitQuest uses a friendly animated stick-figure coach as the central visual language. The coach appears in small, reusable SVG components rather than static image assets, which makes the character easy to adapt for different states:
+
+- login coach with dumbbell animation
+- onboarding coach with profile/checklist animation
+- weekly plan coach message avatar
+- workout-category icons such as squat, push-up, pull-up, dumbbell fly, full-body movement, and sleeping recovery day
+- celebration animation after a workout is completed
+
+This keeps the UI lightweight while leaving room for richer exercise demonstrations later.
 
 ## Tech Stack
 
@@ -31,6 +69,20 @@ The interface uses a friendly coach-like tone and a daily quest structure, so th
 - React Router
 - Framer Motion
 - Tailwind CSS
+
+## Project Structure
+
+```text
+src/
+  components/   Reusable UI and coach animation components
+  context/      Auth state and route protection helpers
+  copy/         Centralized Chinese/English product copy
+  data/         Static UI data
+  pages/        Route-level screens
+  services/     API client functions
+  types/        Shared TypeScript types
+  utils/        Local storage, drafts, and weekly plan cache helpers
+```
 
 ## Getting Started
 
@@ -75,15 +127,9 @@ Preview a production build:
 npm run preview
 ```
 
-## Backend
+## Backend Configuration
 
-This frontend expects a backend API to run at:
-
-```text
-http://localhost:5000
-```
-
-During development, Vite proxies frontend requests from:
+This frontend expects a JSON API. In local development, Vite proxies frontend requests from:
 
 ```text
 /api
@@ -95,7 +141,7 @@ to:
 http://localhost:5000
 ```
 
-For production deployments, set `VITE_API_BASE_URL` to the deployed backend API base URL, for example:
+For production deployments, set `VITE_API_BASE_URL` to the deployed backend API base URL:
 
 ```env
 VITE_API_BASE_URL=https://your-backend-domain.com/api
@@ -107,7 +153,14 @@ Authenticated requests use:
 Authorization: Bearer <token>
 ```
 
-The main API areas are:
+The app also sends `Accept-Language` with protected API requests:
+
+- `zh-CN` for Chinese
+- `en-US` for English
+
+The backend is expected to use this header when generating AI-facing content such as workout titles, coach notes, exercise names, and rationale text.
+
+## Main API Areas
 
 - `POST /api/auth/register`
 - `POST /api/auth/login`
@@ -121,63 +174,28 @@ The main API areas are:
 - `GET /api/training-sessions/week`
 - `GET /api/training-sessions/:id`
 
-## Product Flow
+## State Handling
 
-1. A user creates an account or logs in.
-2. New users complete onboarding with their training profile.
-3. The weekly map shows the current week, completed workouts, rest days, and upcoming training guidance.
-4. The AI generates a temporary plan for the day.
-5. The user can edit and adjust the plan before training.
-6. The user starts a guided workout.
-7. Only after the user finishes and saves the workout is it stored as training history.
+FitQuest uses `localStorage` for lightweight client-side persistence:
 
-AI-generated plans are treated as temporary drafts. They are not saved as completed sessions until the user taps the final save action after training.
+- auth token and current user snapshot
+- unsaved daily workout plan drafts
+- cached weekly plans by user, week start date, and language
+- language preference
 
-## Local Drafts
+Drafts and cached weekly plans are cleared when they could become stale, such as after logout, profile updates, onboarding completion, language changes, or authentication expiry.
 
-The app stores unsaved daily workout plans in `localStorage` so users can leave and return to a plan before starting the workout.
+## Deployment Notes
 
-Drafts are cleared when:
+The app includes a `vercel.json` rewrite so direct refreshes on client-side routes such as `/week`, `/plan`, and `/settings` resolve back to the React app instead of returning a 404.
 
-- the user logs in
-- the user logs out
-- authentication expires
-- onboarding profile setup is saved
-- profile settings are updated
-- a workout is completed and saved
+For production, make sure the frontend has access to a deployed backend and that `VITE_API_BASE_URL` is set during the Vercel build.
 
-This prevents stale workout plans from leaking across users or profile changes.
+## Future Improvements
 
-## Language
-
-The app sends `Accept-Language` with API requests:
-
-- `zh-CN` for Chinese
-- `en-US` for English
-
-The backend is expected to use this header when generating AI-facing content such as workout titles, coach notes, exercise names, and rationales.
-
-Existing saved training history is not automatically translated when the language preference changes.
-
-## Project Structure
-
-```text
-src/
-  context/      Auth state and route protection helpers
-  copy/         Centralized product copy
-  data/         Static UI data
-  pages/        Route-level screens
-  services/     API client functions
-  types/        Shared TypeScript types
-  utils/        Local storage and draft helpers
-```
-
-## Notes
-
-FitQuest focuses on the core user loop:
-
-```text
-register -> profile setup -> generate plan -> train -> save history
-```
-
-Future improvements could include richer workout analytics, cross-device draft sync, stronger localization, more coach personalization, and a more complete design system.
+- Richer exercise-specific coach animations
+- More complete analytics around training consistency and progression
+- Better recovery recommendations based on recent completed sessions
+- Cross-device draft sync
+- More robust localization for generated and saved content
+- A more formal design system for reusable controls and motion patterns

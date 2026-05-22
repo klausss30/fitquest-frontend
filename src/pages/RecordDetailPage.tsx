@@ -67,11 +67,6 @@ export default function RecordDetailPage() {
             <p className="mt-2 text-[12px] font-light" style={{ color: 'rgba(26,24,20,0.45)' }}>
               {coachCopy.records.summary(record.session.session_date, record.session.duration_minutes, exercises.length)}
             </p>
-            {record.session.ai_note && (
-              <p className="mt-4 text-[12px] font-light leading-relaxed" style={{ color: 'rgba(26,24,20,0.56)' }}>
-                {record.session.ai_note}
-              </p>
-            )}
           </div>
 
           <div className="flex flex-col gap-2">
@@ -95,11 +90,6 @@ export default function RecordDetailPage() {
                     {coachCopy.options.categories[exercise.category] ?? exercise.category}
                   </span>
                 </div>
-                {exercise.rationale && (
-                  <p className="mt-3 text-[12px] font-light leading-relaxed" style={{ color: 'rgba(26,24,20,0.48)' }}>
-                    {exercise.rationale}
-                  </p>
-                )}
               </div>
             ))}
           </div>
