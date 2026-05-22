@@ -6,6 +6,7 @@ import { updateProfile } from '../services/api'
 import { useCoachCopy } from '../copy/coachCopy'
 import { clearPlanDrafts } from '../utils/planDrafts'
 import StickCoach from '../components/coach/StickCoach'
+import { clearWeekPlanCache } from '../utils/weekPlanCache'
 
 const levelOptions: ExperienceLevel[] = ['beginner', 'intermediate', 'advanced']
 const goalOptions: TrainingGoal[] = ['muscle_gain', 'fat_loss', 'strength']
@@ -65,6 +66,7 @@ export default function OnboardingPage() {
         weight_kg: weightKg ? Number(weightKg) : null,
       })
       clearPlanDrafts()
+      clearWeekPlanCache()
       navigate('/', { replace: true })
     } catch (err) {
       setError((err as Error).message)

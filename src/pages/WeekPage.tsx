@@ -4,6 +4,8 @@ import { motion } from 'framer-motion'
 import { DayData, DayStatus, TrainingSession, WeekPlanDay } from '../types'
 import { getWeekPlan, getWeekSessions } from '../services/api'
 import { CoachCopy, useAppLanguage, useCoachCopy } from '../copy/coachCopy'
+import { useAuth } from '../context/AuthContext'
+import { readWeekPlanCache, writeWeekPlanCache } from '../utils/weekPlanCache'
 
 interface LevelStyle {
   bg: string
@@ -184,6 +186,7 @@ export default function WeekPage() {
   const navigate = useNavigate()
   const coachCopy = useCoachCopy()
   const appLanguage = useAppLanguage()
+  const { user } = useAuth()
   const todayRef = useRef<HTMLDivElement | null>(null)
   const [sessions, setSessions] = useState<TrainingSession[]>([])
   const [weekPlanDays, setWeekPlanDays] = useState<WeekPlanDay[]>([])
@@ -191,16 +194,31 @@ export default function WeekPage() {
   const [coachMessage, setCoachMessage] = useState('')
 
   useEffect(() => {
+    if (!user) return
+
     const weekStart = formatDateKey(getWeekStart(new Date()))
+    const cachedPlan = readWeekPlanCache(user.id, weekStart, appLanguage)
+
+    setError('')
+    if (cachedPlan) {
+      setWeekPlanDays(cachedPlan.days)
+    } else {
+      setWeekPlanDays([])
+    }
 
     getWeekSessions(weekStart)
       .then((data) => setSessions(data.sessions))
       .catch((err) => setError((err as Error).message))
 
-    getWeekPlan(weekStart)
-      .then((data) => setWeekPlanDays(data.days))
-      .catch(() => setWeekPlanDays([]))
-  }, [appLanguage])
+    if (!cachedPlan) {
+      getWeekPlan(weekStart)
+        .then((data) => {
+          setWeekPlanDays(data.days)
+          writeWeekPlanCache(user.id, appLanguage, data)
+        })
+        .catch(() => setWeekPlanDays([]))
+    }
+  }, [appLanguage, user])
 
   const todayKey = formatDateKey(new Date())
   const sessionByDate = new Map(sessions.map((session) => [session.session_date, session]))

@@ -6,6 +6,7 @@ import { getMe, updateProfile } from '../services/api'
 import { ExperienceLevel, TrainingGoal } from '../types'
 import { LanguageMode, useCoachCopy, useLanguageMode, writeLanguageMode } from '../copy/coachCopy'
 import { clearPlanDrafts } from '../utils/planDrafts'
+import { clearWeekPlanCache } from '../utils/weekPlanCache'
 
 const levelOptions: ExperienceLevel[] = ['beginner', 'intermediate', 'advanced']
 const goalOptions: TrainingGoal[] = ['muscle_gain', 'fat_loss', 'strength']
@@ -168,6 +169,7 @@ export default function SettingsPage() {
         weight_kg: weightKg ? Number(weightKg) : null,
       })
       clearPlanDrafts()
+      clearWeekPlanCache()
       setMessage(coachCopy.settings.saved)
     } catch (err) {
       setError((err as Error).message)
@@ -185,6 +187,7 @@ export default function SettingsPage() {
     setLanguageMode(mode)
     writeLanguageMode(mode)
     clearPlanDrafts()
+    clearWeekPlanCache()
   }
 
   const languageLabel = coachCopy.options.languageModes[languageMode].label
