@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { PlanExercise, TemporaryPlanResponse } from '../types'
 import { saveTrainingSession } from '../services/api'
 import { CoachCopy, useCoachCopy } from '../copy/coachCopy'
 import { LEGACY_PLAN_DRAFT_PREFIX, PLAN_DRAFT_PREFIX } from '../utils/storageKeys'
+import WorkoutCoachIcon from '../components/coach/WorkoutCoachIcon'
 
 function exerciseId(exercise: PlanExercise) {
   return `${exercise.sort_order}-${exercise.exercise_name}`
@@ -51,8 +52,10 @@ export default function WorkoutPage() {
   const [restTotal, setRestTotal] = useState(0)
   const [restTarget, setRestTarget] = useState<'next_set' | 'next_exercise' | null>(null)
   const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
   const [saveError, setSaveError] = useState('')
   const [startedAt] = useState(() => Date.now())
+  const saveStartedRef = useRef(false)
 
   useEffect(() => {
     if (!statePlan) {
@@ -161,7 +164,7 @@ export default function WorkoutPage() {
   }
 
   const handleSaveWorkout = async () => {
-    if (!plan || saving) return
+    if (!plan || saving || saved) return
     const completedExercises = exercises.filter((exercise) => completedExerciseIds.includes(exerciseId(exercise)))
     if (!completedExercises.length) {
       setSaveError(coachCopy.workout.minSaveError)
@@ -186,13 +189,19 @@ export default function WorkoutPage() {
       })
       localStorage.removeItem(`${PLAN_DRAFT_PREFIX}${plan.plan.session_date}`)
       localStorage.removeItem(`${LEGACY_PLAN_DRAFT_PREFIX}${plan.plan.session_date}`)
-      navigate('/records')
+      setSaved(true)
     } catch (err) {
       setSaveError((err as Error).message || coachCopy.workout.saveFailed)
     } finally {
       setSaving(false)
     }
   }
+
+  useEffect(() => {
+    if (!finished || saveStartedRef.current) return
+    saveStartedRef.current = true
+    void handleSaveWorkout()
+  }, [finished, completedExerciseIds])
 
   if (loading) {
     return (
@@ -223,16 +232,20 @@ export default function WorkoutPage() {
       <div className="min-h-screen flex flex-col px-5 pt-14 pb-8" style={{ background: '#F7FBF4', color: '#1A1814' }}>
         <div className="flex flex-1 flex-col items-center justify-center text-center">
           <motion.div
-            className="flex h-28 w-28 items-center justify-center rounded-full text-[34px]"
+            className="flex h-32 w-32 items-center justify-center rounded-full overflow-hidden"
             style={{ background: '#FFFFFF', border: '2px solid rgba(87,200,120,0.46)', boxShadow: '0 18px 36px rgba(61,104,72,0.14)' }}
             initial={{ scale: 0.7, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
           >
-            ✓
+            <WorkoutCoachIcon muscleGroup="celebrate" size={108} />
           </motion.div>
           <h1 className="mt-7 text-[24px] font-semibold">{coachCopy.workout.finishedTitle}</h1>
           <p className="mt-2 text-[13px] font-light" style={{ color: 'rgba(26,24,20,0.48)' }}>
             {coachCopy.workout.summary(completedExerciseIds.length, skippedExerciseIds.length, elapsedMinutes)}
+          </p>
+
+          <p className="mt-4 rounded-2xl px-4 py-3 text-[12px] font-light" style={{ background: saved ? '#EAF7EF' : '#FFF7E8', color: saved ? '#2F8F58' : '#9D6414' }}>
+            {saved ? coachCopy.workout.saved : saving ? coachCopy.workout.saving : coachCopy.workout.saving}
           </p>
 
           {tooHeavyIds.length > 0 && (
@@ -250,16 +263,9 @@ export default function WorkoutPage() {
         <div className="flex flex-col gap-2">
           <button
             className="w-full rounded-2xl py-4 text-[14px] font-semibold"
-            style={{ background: completedExerciseIds.length ? '#57C878' : 'rgba(26,24,20,0.08)', color: completedExerciseIds.length ? '#FFFFFF' : 'rgba(26,24,20,0.35)', boxShadow: completedExerciseIds.length ? '0 10px 24px rgba(74,174,106,0.24)' : 'none' }}
-            onClick={handleSaveWorkout}
-            disabled={saving || !completedExerciseIds.length}
-          >
-            {saving ? coachCopy.workout.saving : coachCopy.workout.save}
-          </button>
-          <button
-            className="w-full rounded-2xl py-3 text-[13px] font-semibold"
-            style={{ background: '#FFFFFF', color: 'rgba(26,24,20,0.52)', border: '1px solid rgba(26,24,20,0.08)' }}
+            style={{ background: saved ? '#57C878' : 'rgba(26,24,20,0.08)', color: saved ? '#FFFFFF' : 'rgba(26,24,20,0.35)', boxShadow: saved ? '0 10px 24px rgba(74,174,106,0.24)' : 'none' }}
             onClick={() => navigate('/')}
+            disabled={!saved && !saveError}
           >
             {coachCopy.workout.home}
           </button>

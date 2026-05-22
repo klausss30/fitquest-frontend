@@ -19,6 +19,7 @@ export interface DayData {
   date: number
   status: DayStatus
   workoutType?: string
+  muscleGroup?: WeekPlanMuscleGroup
 }
 
 export interface TrainingSession {

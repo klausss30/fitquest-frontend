@@ -6,13 +6,13 @@ import { getWeekPlan, getWeekSessions } from '../services/api'
 import { CoachCopy, useAppLanguage, useCoachCopy } from '../copy/coachCopy'
 import { useAuth } from '../context/AuthContext'
 import { readWeekPlanCache, writeWeekPlanCache } from '../utils/weekPlanCache'
+import WorkoutCoachIcon from '../components/coach/WorkoutCoachIcon'
 
 interface LevelStyle {
   bg: string
   border: string
   color: string
   shadow: string
-  icon: string
   label: string
 }
 
@@ -99,7 +99,6 @@ function getLevelStyle(status: DayStatus, coachCopy: CoachCopy): LevelStyle {
         border: 'rgba(91, 181, 122, 0.55)',
         color: '#2F8F58',
         shadow: '0 8px 18px rgba(91,181,122,0.18)',
-        icon: '✓',
         label: coachCopy.week.done,
       }
     case 'today':
@@ -108,7 +107,6 @@ function getLevelStyle(status: DayStatus, coachCopy: CoachCopy): LevelStyle {
         border: 'rgba(255, 181, 72, 0.85)',
         color: '#D88416',
         shadow: '0 10px 28px rgba(255,181,72,0.28)',
-        icon: '▶',
         label: coachCopy.week.todayWorkout,
       }
     case 'rest':
@@ -117,7 +115,6 @@ function getLevelStyle(status: DayStatus, coachCopy: CoachCopy): LevelStyle {
         border: 'rgba(111, 151, 176, 0.28)',
         color: '#6C8798',
         shadow: '0 6px 14px rgba(111,151,176,0.12)',
-        icon: '·',
         label: coachCopy.week.rest,
       }
     case 'future':
@@ -126,7 +123,6 @@ function getLevelStyle(status: DayStatus, coachCopy: CoachCopy): LevelStyle {
         border: 'rgba(26,24,20,0.08)',
         color: 'rgba(26,24,20,0.24)',
         shadow: '0 4px 10px rgba(0,0,0,0.04)',
-        icon: '·',
         label: coachCopy.week.future,
       }
   }
@@ -167,7 +163,10 @@ function LevelNode({ day, index, coachCopy, onClick }: { day: DayData; index: nu
           boxShadow: style.shadow,
         }}
       >
-        {style.icon}
+        <WorkoutCoachIcon
+          muscleGroup={day.muscleGroup ?? (day.status === 'rest' ? 'rest' : 'coach')}
+          muted={day.status === 'future' && !day.muscleGroup}
+        />
       </div>
 
       <div className="relative z-10 min-w-0">
@@ -231,6 +230,7 @@ export default function WeekPage() {
       return {
         ...day,
         workoutType: session.day_type,
+        muscleGroup: session.muscle_group,
         status: day.dateKey === todayKey ? 'today' : 'done' as DayStatus,
       }
     }
@@ -239,6 +239,7 @@ export default function WeekPage() {
       return {
         ...day,
         workoutType: plannedDay.muscle_group === 'rest' ? undefined : plannedDay.day_type,
+        muscleGroup: plannedDay.muscle_group,
         status: plannedDay.muscle_group === 'rest' ? 'rest' : day.dateKey === todayKey ? 'today' : 'future' as DayStatus,
       }
     }
@@ -302,10 +303,10 @@ export default function WeekPage() {
             transition={{ delay: 0.08, duration: 0.35 }}
           >
             <div
-              className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl text-xl"
+              className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-2xl overflow-hidden"
               style={{ background: '#E8F7EC', border: '1px solid rgba(74,174,106,0.22)' }}
             >
-              ✦
+              <WorkoutCoachIcon muscleGroup="coach" />
             </div>
             <div className="min-w-0">
               <p className="text-[13px] font-semibold">{coachCopy.week.todayTitle}</p>
