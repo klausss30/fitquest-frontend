@@ -251,7 +251,7 @@ export default function WeekPage() {
 
       <div className="relative flex min-h-screen flex-col px-5 pb-6">
         <div
-          className="fixed inset-x-0 top-0 z-30 mx-auto max-w-[390px] px-5 pb-5 pt-12"
+          className="fixed inset-x-0 top-0 z-30 mx-auto w-full px-5 pb-5 pt-12 sm:max-w-[430px]"
           style={{ background: 'linear-gradient(180deg, #F7FBF4 76%, rgba(247,251,244,0))' }}
         >
           <div className="flex items-center gap-3">
@@ -313,7 +313,7 @@ export default function WeekPage() {
           </div>
         </div>
 
-        <div className="pointer-events-none fixed inset-x-0 bottom-0 z-20 mx-auto max-w-[390px] px-5 pb-6 pt-10" style={{ background: 'linear-gradient(180deg, rgba(247,251,244,0), #F7FBF4 42%)' }}>
+        <div className="pointer-events-none fixed inset-x-0 bottom-0 z-20 mx-auto w-full px-5 pb-6 pt-10 sm:max-w-[430px]" style={{ background: 'linear-gradient(180deg, rgba(247,251,244,0), #F7FBF4 42%)' }}>
           <motion.button
             className="pointer-events-auto flex w-full items-center justify-center gap-2 rounded-[22px] py-4 text-[15px] font-semibold"
             style={{

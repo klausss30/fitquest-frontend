@@ -16,7 +16,7 @@ import { clearPlanDrafts } from '../utils/planDrafts'
 import { resolveAppLanguage } from '../copy/coachCopy'
 import { LEGACY_USER_STORAGE_KEY, USER_STORAGE_KEY } from '../utils/storageKeys'
 
-const BASE = '/api'
+const BASE = import.meta.env.VITE_API_BASE_URL || '/api'
 const TOKEN_KEY = 'token'
 
 function getAppLanguage() {

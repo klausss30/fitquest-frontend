@@ -48,6 +48,7 @@ cp .env.example .env
 
 ```env
 VITE_API_PROXY_TARGET=http://localhost:5000
+VITE_API_BASE_URL=/api
 ```
 
 Start the development server:
@@ -92,6 +93,12 @@ to:
 
 ```text
 http://localhost:5000
+```
+
+For production deployments, set `VITE_API_BASE_URL` to the deployed backend API base URL, for example:
+
+```env
+VITE_API_BASE_URL=https://your-backend-domain.com/api
 ```
 
 Authenticated requests use:

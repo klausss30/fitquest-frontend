@@ -26,8 +26,8 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
 
 function AppRoutes() {
   return (
-    <div className="min-h-screen bg-[#FAFAF8] flex items-center justify-center">
-      <div className="w-full max-w-[390px] min-h-screen relative overflow-hidden">
+    <div className="min-h-dvh bg-[#FAFAF8] flex items-stretch justify-center sm:items-center">
+      <div className="w-full min-h-dvh relative overflow-hidden sm:max-w-[430px]">
         <Routes>
           <Route path="/login"    element={<PublicRoute><LoginPage /></PublicRoute>} />
           <Route path="/register" element={<PublicRoute><RegisterPage /></PublicRoute>} />
