@@ -5,6 +5,7 @@ import { ExperienceLevel, TrainingGender, TrainingGoal } from '../types'
 import { updateProfile } from '../services/api'
 import { useCoachCopy } from '../copy/coachCopy'
 import { clearPlanDrafts } from '../utils/planDrafts'
+import StickCoach from '../components/coach/StickCoach'
 
 const levelOptions: ExperienceLevel[] = ['beginner', 'intermediate', 'advanced']
 const goalOptions: TrainingGoal[] = ['muscle_gain', 'fat_loss', 'strength']
@@ -81,11 +82,8 @@ export default function OnboardingPage() {
         transition={{ duration: 0.4 }}
       >
         <div className="text-center">
-          <div
-            className="mx-auto flex h-24 w-24 items-center justify-center rounded-full text-[28px]"
-            style={{ background: '#FFFFFF', border: '2px solid rgba(87,200,120,0.42)', boxShadow: '0 16px 32px rgba(61,104,72,0.12)' }}
-          >
-            ✦
+          <div className="flex justify-center">
+            <StickCoach variant="onboarding" size="sm" />
           </div>
           <h1 className="mt-6 text-[23px] font-semibold">{coachCopy.onboarding.title}</h1>
           <p className="mt-2 text-[12px] font-light leading-relaxed" style={{ color: 'rgba(26,24,20,0.48)' }}>

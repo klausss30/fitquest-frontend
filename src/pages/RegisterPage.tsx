@@ -90,9 +90,6 @@ export default function RegisterPage() {
         >
           <div className="mb-7 text-center">
             <h1 className="text-[24px] font-semibold">{coachCopy.auth.registerTitle}</h1>
-            <p className="mt-2 text-[13px] font-light" style={{ color: 'rgba(26,24,20,0.48)' }}>
-              {coachCopy.auth.registerSub}
-            </p>
           </div>
 
           <form onSubmit={handleSubmit} className="flex flex-col gap-3">

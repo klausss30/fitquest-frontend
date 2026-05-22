@@ -1,4 +1,16 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-  <circle cx="16" cy="16" r="16" fill="#534AB7"/>
-  <text x="16" y="22" text-anchor="middle" font-size="16" fill="white">▶</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <rect width="64" height="64" rx="18" fill="#F7FBF4"/>
+  <circle cx="32" cy="32" r="25" fill="#57C878"/>
+  <circle cx="32" cy="23" r="8" fill="#F8FCF5" stroke="#1A1814" stroke-width="3"/>
+  <path d="M25 20c3-4 10-4 14 0" fill="none" stroke="#FFF2C7" stroke-width="3" stroke-linecap="round"/>
+  <path d="M32 32v14" fill="none" stroke="#1A1814" stroke-width="4" stroke-linecap="round"/>
+  <path d="M31 37c-8-1-13-6-16-11" fill="none" stroke="#1A1814" stroke-width="4" stroke-linecap="round"/>
+  <path d="M10 22l10 10" fill="none" stroke="#FFF2C7" stroke-width="3" stroke-linecap="round"/>
+  <path d="M7 25l6-6" fill="none" stroke="#FFF2C7" stroke-width="4" stroke-linecap="round"/>
+  <path d="M17 35l6-6" fill="none" stroke="#FFF2C7" stroke-width="4" stroke-linecap="round"/>
+  <path d="M33 37c7 0 12 4 15 10" fill="none" stroke="#1A1814" stroke-width="4" stroke-linecap="round"/>
+  <path d="M32 46l-8 11" fill="none" stroke="#1A1814" stroke-width="4" stroke-linecap="round"/>
+  <path d="M33 46l10 10" fill="none" stroke="#1A1814" stroke-width="4" stroke-linecap="round"/>
+  <path d="M47 13h8l-3 5 3 5h-8z" fill="#FFF2C7" stroke="#1A1814" stroke-width="2" stroke-linejoin="round"/>
+  <path d="M47 13v18" fill="none" stroke="#1A1814" stroke-width="3" stroke-linecap="round"/>
 </svg>
