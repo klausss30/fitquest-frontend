@@ -1,11 +1,17 @@
 import {
   AdjustType,
+  CheckInHistoryResponse,
+  CheckInPayload,
+  CheckInResponse,
   CurrentUserResponse,
+  NutritionResponse,
   PlanGenerateParams,
   ProfileResponse,
   SaveTrainingSessionPayload,
   SessionDetailResponse,
+  StatsResponse,
   TemporaryPlanResponse,
+  TodayCheckInResponse,
   TrainingHistoryResponse,
   UserProfilePayload,
   WeekPlanResponse,
@@ -18,6 +24,31 @@ import { LEGACY_USER_STORAGE_KEY, USER_STORAGE_KEY } from '../utils/storageKeys'
 
 const BASE = import.meta.env.VITE_API_BASE_URL || '/api'
 const TOKEN_KEY = 'token'
+
+/**
+ * Classify a caught error into a user-facing message.
+ * Keeps all error-string logic in one place so pages stay clean.
+ */
+export function classifyApiError(err: unknown, lang: 'zh' | 'en', fallback?: string): string {
+  const e = err as Error
+  if (e.name === 'AbortError') return ''   // caller should handle silently
+
+  // Network / no connection
+  if (e.name === 'TypeError' && e.message.toLowerCase().includes('failed to fetch')) {
+    return lang === 'zh' ? '网络连接失败，请检查网络后重试' : 'No network connection — please check and retry'
+  }
+
+  // Server returned a structured error message (from apiFetch throw)
+  if (e.message && !e.message.includes('请求失败') && !e.message.includes('Request failed')) {
+    // Rate limit
+    if (e.message.includes('太频繁') || e.message.includes('rate') || e.message.includes('429')) {
+      return lang === 'zh' ? '请求太频繁，请稍后再试' : 'Too many requests — please wait a moment'
+    }
+    return e.message
+  }
+
+  return fallback ?? (lang === 'zh' ? '请求失败，请稍后重试' : 'Request failed — please try again')
+}
 
 function getAppLanguage() {
   return resolveAppLanguage()
@@ -78,10 +109,11 @@ export async function updateProfile(profile: UserProfilePayload): Promise<Profil
   })
 }
 
-export async function generatePlan(params: PlanGenerateParams = {}): Promise<TemporaryPlanResponse> {
+export async function generatePlan(params: PlanGenerateParams = {}, signal?: AbortSignal): Promise<TemporaryPlanResponse> {
   return apiFetch<TemporaryPlanResponse>('/plan/generate', {
     method: 'POST',
     body: JSON.stringify(params),
+    signal,
   })
 }
 
@@ -90,10 +122,11 @@ export async function adjustPlan(params: {
   exercises: TemporaryPlanResponse['exercises']
   adjust_type: AdjustType
   custom_message?: string
-}): Promise<TemporaryPlanResponse> {
+}, signal?: AbortSignal): Promise<TemporaryPlanResponse> {
   return apiFetch<TemporaryPlanResponse>('/plan/adjust', {
     method: 'POST',
     body: JSON.stringify(params),
+    signal,
   })
 }
 
@@ -120,4 +153,33 @@ export async function getTrainingSession(id: number): Promise<SessionDetailRespo
 
 export async function getTrainingHistory(limit = 20): Promise<TrainingHistoryResponse> {
   return apiFetch<TrainingHistoryResponse>(`/training-sessions?limit=${limit}`)
+}
+
+// ── Daily Check-In ─────────────────────────────────────────────────────────
+
+export async function submitCheckIn(payload: CheckInPayload): Promise<CheckInResponse> {
+  return apiFetch<CheckInResponse>('/checkin', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+}
+
+export async function getTodayCheckIn(): Promise<TodayCheckInResponse> {
+  return apiFetch<TodayCheckInResponse>('/checkin/today')
+}
+
+export async function getCheckInHistory(days = 7): Promise<CheckInHistoryResponse> {
+  return apiFetch<CheckInHistoryResponse>(`/checkin/history?days=${days}`)
+}
+
+// ── Stats ───────────────────────────────────────────────────────────────────
+
+export async function getStats(): Promise<StatsResponse> {
+  return apiFetch<StatsResponse>('/stats')
+}
+
+// ── Nutrition ───────────────────────────────────────────────────────────────
+
+export async function getNutrition(signal?: AbortSignal): Promise<NutritionResponse> {
+  return apiFetch<NutritionResponse>('/nutrition', { signal })
 }

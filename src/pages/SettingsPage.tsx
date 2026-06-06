@@ -7,6 +7,7 @@ import { ExperienceLevel, TrainingGoal } from '../types'
 import { LanguageMode, useCoachCopy, useLanguageMode, writeLanguageMode } from '../copy/coachCopy'
 import { clearPlanDrafts } from '../utils/planDrafts'
 import { clearWeekPlanCache } from '../utils/weekPlanCache'
+import BackButton from '../components/BackButton'
 
 const levelOptions: ExperienceLevel[] = ['beginner', 'intermediate', 'advanced']
 const goalOptions: TrainingGoal[] = ['muscle_gain', 'fat_loss', 'strength']
@@ -197,7 +198,7 @@ export default function SettingsPage() {
   const headerTitle = view === 'profile' ? coachCopy.settings.profileTitle : view === 'language' ? coachCopy.settings.languageTitle : coachCopy.settings.title
   const handleBack = () => {
     if (view === 'menu') {
-      navigate('/profile')
+      navigate('/')
       return
     }
     setMessage('')
@@ -208,13 +209,7 @@ export default function SettingsPage() {
   return (
     <div className="min-h-screen overflow-y-auto px-5 pt-14 pb-8" style={{ background: '#F7FBF4', color: '#1A1814' }}>
       <div className="flex items-center gap-3">
-        <button
-          className="flex h-9 w-9 items-center justify-center rounded-full text-sm"
-          style={{ background: '#FFFFFF', border: '1px solid rgba(26,24,20,0.08)', color: 'rgba(26,24,20,0.48)' }}
-          onClick={handleBack}
-        >
-          ←
-        </button>
+        <BackButton onClick={handleBack} />
         <div>
           <h1 className="text-[21px] font-semibold leading-tight">{headerTitle}</h1>
         </div>

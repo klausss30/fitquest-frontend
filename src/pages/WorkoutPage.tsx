@@ -6,6 +6,7 @@ import { saveTrainingSession } from '../services/api'
 import { CoachCopy, useCoachCopy } from '../copy/coachCopy'
 import { LEGACY_PLAN_DRAFT_PREFIX, PLAN_DRAFT_PREFIX } from '../utils/storageKeys'
 import WorkoutCoachIcon from '../components/coach/WorkoutCoachIcon'
+import BackButton from '../components/BackButton'
 
 function exerciseId(exercise: PlanExercise) {
   return `${exercise.sort_order}-${exercise.exercise_name}`
@@ -277,13 +278,7 @@ export default function WorkoutPage() {
   return (
     <div className="min-h-screen flex flex-col px-5 pt-14 pb-7" style={{ background: '#F7FBF4', color: '#1A1814' }}>
       <div className="flex items-center gap-3">
-        <button
-          className="flex h-9 w-9 items-center justify-center rounded-full text-sm"
-          style={{ background: '#FFFFFF', border: '1px solid rgba(26,24,20,0.08)', color: 'rgba(26,24,20,0.48)' }}
-          onClick={() => navigate('/plan', { state: { plan } })}
-        >
-          ←
-        </button>
+        <BackButton onClick={() => navigate('/plan', { state: { plan } })} />
         <div className="min-w-0 flex-1">
           <h1 className="text-[18px] font-semibold">{coachCopy.workout.inProgress}</h1>
         </div>

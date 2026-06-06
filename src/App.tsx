@@ -7,10 +7,11 @@ import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
 import RecordsPage from './pages/RecordsPage'
 import RecordDetailPage from './pages/RecordDetailPage'
-import ProfilePage from './pages/ProfilePage'
 import WorkoutPage from './pages/WorkoutPage'
 import OnboardingPage from './pages/OnboardingPage'
 import SettingsPage from './pages/SettingsPage'
+import CheckInPage from './pages/CheckInPage'
+import NutritionPage from './pages/NutritionPage'
 
 // Routes that require an authenticated user.
 function PrivateRoute({ children }: { children: React.ReactNode }) {
@@ -38,8 +39,9 @@ function AppRoutes() {
           <Route path="/workout"  element={<PrivateRoute><WorkoutPage /></PrivateRoute>} />
           <Route path="/records"  element={<PrivateRoute><RecordsPage /></PrivateRoute>} />
           <Route path="/records/:id" element={<PrivateRoute><RecordDetailPage /></PrivateRoute>} />
-          <Route path="/profile"  element={<PrivateRoute><ProfilePage /></PrivateRoute>} />
-          <Route path="/settings" element={<PrivateRoute><SettingsPage /></PrivateRoute>} />
+<Route path="/settings" element={<PrivateRoute><SettingsPage /></PrivateRoute>} />
+          <Route path="/checkin"   element={<PrivateRoute><CheckInPage /></PrivateRoute>} />
+          <Route path="/nutrition" element={<PrivateRoute><NutritionPage /></PrivateRoute>} />
           <Route path="*"         element={<Navigate to="/" replace />} />
         </Routes>
       </div>

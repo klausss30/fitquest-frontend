@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { TrainingSession } from '../types'
 import { getTrainingHistory } from '../services/api'
 import { useCoachCopy } from '../copy/coachCopy'
+import BackButton from '../components/BackButton'
 
 export default function RecordsPage() {
   const navigate = useNavigate()
@@ -21,13 +22,7 @@ export default function RecordsPage() {
   return (
     <div className="min-h-screen flex flex-col px-5 pt-14 pb-8" style={{ background: '#F7FBF4', color: '#1A1814' }}>
       <div className="flex items-center gap-3">
-        <button
-          className="flex h-9 w-9 items-center justify-center rounded-full text-sm"
-          style={{ background: '#FFFFFF', border: '1px solid rgba(26,24,20,0.08)', color: 'rgba(26,24,20,0.48)' }}
-          onClick={() => navigate('/')}
-        >
-          ←
-        </button>
+        <BackButton to="/" />
         <div>
           <h1 className="text-[21px] font-semibold leading-tight">{coachCopy.records.title}</h1>
         </div>

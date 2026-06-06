@@ -73,6 +73,7 @@ export interface SessionDetailResponse {
 export interface TemporaryPlanResponse {
   plan: TrainingPlan
   exercises: PlanExercise[]
+  reasoning?: PlanReasoning
 }
 
 export interface SaveTrainingSessionPayload extends TrainingPlan {
@@ -144,6 +145,82 @@ export interface ProfileResponse {
   profile: UserProfile
 }
 
+// ── Reasoning ────────────────────────────────────────────────────────────────
+
+export type RiskLevel = 'low' | 'moderate' | 'high'
+
+export interface ReasoningGoalAnalysis {
+  primary_goal: string
+  secondary_goal: string | null
+  note: string
+}
+
+export interface ReasoningRecoveryAnalysis {
+  sleep_hours: number
+  energy_level: number
+  stress_level: number
+  recovery_score: number
+  summary: string
+}
+
+export interface ReasoningRiskAssessment {
+  level: RiskLevel
+  factors: string[]
+}
+
+export interface ReasoningHistoryAnalysis {
+  sessions_last_7_days: number
+  last_muscle_group: string | null
+  summary: string
+}
+
+export interface ReasoningDecision {
+  muscle_group: string
+  action: string
+  rationale: string
+}
+
+export interface PlanReasoning {
+  goal_analysis: ReasoningGoalAnalysis
+  recovery_analysis: ReasoningRecoveryAnalysis | null
+  risk_assessment: ReasoningRiskAssessment
+  history_analysis: ReasoningHistoryAnalysis
+  decision: ReasoningDecision
+}
+
+// ── Daily Check-In ────────────────────────────────────────────────────────────
+
+export type RecoveryStatus = 'excellent' | 'good' | 'moderate' | 'low' | 'poor'
+
+export interface CheckInPayload {
+  date?: string          // YYYY-MM-DD, defaults to today on backend
+  sleep_hours: number
+  energy_level: number   // 1–10
+  stress_level: number   // 1–10
+  weight_kg?: number | null
+  notes?: string | null
+}
+
+export interface CheckInResponse {
+  date: string
+  sleep_hours: number
+  energy_level: number
+  stress_level: number
+  weight_kg: number | null
+  notes: string | null
+  recovery_score: number
+  recovery_status: RecoveryStatus
+}
+
+export interface TodayCheckInResponse {
+  exists: boolean
+  checkin?: CheckInResponse
+}
+
+export interface CheckInHistoryResponse {
+  checkins: CheckInResponse[]
+}
+
 export interface CurrentUserResponse {
   user: {
     id: number
@@ -151,4 +228,31 @@ export interface CurrentUserResponse {
     email: string
   }
   profile: UserProfile | null
+}
+
+// ── Stats ─────────────────────────────────────────────────────────────────────
+
+export interface StatsResponse {
+  streak: number
+  sessions_this_week: number
+  recovery_score: number | null
+  recovery_status: RecoveryStatus | null
+}
+
+// ── Nutrition ─────────────────────────────────────────────────────────────────
+
+export interface NutritionMealSuggestion {
+  meal: string
+  suggestion: string
+  calories_approx: number
+}
+
+export interface NutritionResponse {
+  daily_calories: number
+  protein_g: number
+  carbs_g: number
+  fat_g: number
+  goal_note: string
+  meal_suggestions: NutritionMealSuggestion[]
+  reasoning: string
 }

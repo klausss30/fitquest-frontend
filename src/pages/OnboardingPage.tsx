@@ -55,15 +55,27 @@ export default function OnboardingPage() {
 
   const submitProfile = async () => {
     setError('')
-    setLoading(true)
 
+    const h = Number(heightCm)
+    const w = Number(weightKg)
+
+    if (!heightCm || isNaN(h) || h < 100 || h > 250) {
+      setError(coachCopy.onboarding.heightError)
+      return
+    }
+    if (!weightKg || isNaN(w) || w < 30 || w > 300) {
+      setError(coachCopy.onboarding.weightError)
+      return
+    }
+
+    setLoading(true)
     try {
       await updateProfile({
         experience_level: experienceLevel,
         goal,
         gender,
-        height_cm: heightCm ? Number(heightCm) : null,
-        weight_kg: weightKg ? Number(weightKg) : null,
+        height_cm: h,
+        weight_kg: w,
       })
       clearPlanDrafts()
       clearWeekPlanCache()
@@ -140,8 +152,9 @@ export default function OnboardingPage() {
 
         <div className="mt-6 grid grid-cols-2 gap-2">
           <label>
-            <span className="mb-1.5 block text-[11px] font-light" style={{ color: 'rgba(26,24,20,0.42)' }}>
+            <span className="mb-1.5 flex items-center gap-1 text-[11px] font-light" style={{ color: 'rgba(26,24,20,0.42)' }}>
               {coachCopy.onboarding.height}
+              <span style={{ color: '#C07878' }}>*</span>
             </span>
             <input
               type="number"
@@ -153,8 +166,9 @@ export default function OnboardingPage() {
             />
           </label>
           <label>
-            <span className="mb-1.5 block text-[11px] font-light" style={{ color: 'rgba(26,24,20,0.42)' }}>
+            <span className="mb-1.5 flex items-center gap-1 text-[11px] font-light" style={{ color: 'rgba(26,24,20,0.42)' }}>
               {coachCopy.onboarding.weight}
+              <span style={{ color: '#C07878' }}>*</span>
             </span>
             <input
               type="number"

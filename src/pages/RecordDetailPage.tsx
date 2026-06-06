@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
 import { SessionDetailResponse } from '../types'
 import { getTrainingSession } from '../services/api'
 import { CoachCopy, useCoachCopy } from '../copy/coachCopy'
+import BackButton from '../components/BackButton'
 
 function exerciseDetail(sets: number, reps: number, weight: number | null, unit: string | null, coachCopy: CoachCopy) {
   const load = weight != null && weight > 0 ? `${weight} ${unit ?? ''}` : coachCopy.common.bodyweight
@@ -10,7 +11,6 @@ function exerciseDetail(sets: number, reps: number, weight: number | null, unit:
 }
 
 export default function RecordDetailPage() {
-  const navigate = useNavigate()
   const coachCopy = useCoachCopy()
   const { id } = useParams()
   const [record, setRecord] = useState<SessionDetailResponse | null>(null)
@@ -36,13 +36,7 @@ export default function RecordDetailPage() {
   return (
     <div className="min-h-screen flex flex-col px-5 pt-14 pb-8" style={{ background: '#F7FBF4', color: '#1A1814' }}>
       <div className="flex items-center gap-3">
-        <button
-          className="flex h-9 w-9 items-center justify-center rounded-full text-sm"
-          style={{ background: '#FFFFFF', border: '1px solid rgba(26,24,20,0.08)', color: 'rgba(26,24,20,0.48)' }}
-          onClick={() => navigate('/records')}
-        >
-          ←
-        </button>
+        <BackButton to="/records" />
         <div className="min-w-0">
           <h1 className="text-[21px] font-semibold leading-tight">{coachCopy.records.detailTitle}</h1>
         </div>

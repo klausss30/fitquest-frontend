@@ -1,10 +1,13 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { motion, AnimatePresence, Reorder } from 'framer-motion'
-import { Exercise, AdjustType, MuscleGroup, PlanExercise, SessionDetailResponse, TemporaryPlanResponse } from '../types'
-import { adjustPlan, generatePlan, getTrainingSession } from '../services/api'
-import { CoachCopy, useCoachCopy } from '../copy/coachCopy'
+import { Exercise, AdjustType, MuscleGroup, PlanExercise, PlanReasoning, SessionDetailResponse, TemporaryPlanResponse } from '../types'
+import { adjustPlan, classifyApiError, generatePlan, getTrainingHistory, getTrainingSession, getTodayCheckIn } from '../services/api'
+import { CoachCopy, useAppLanguage, useCoachCopy } from '../copy/coachCopy'
 import { LEGACY_PLAN_DRAFT_PREFIX, PLAN_DRAFT_PREFIX } from '../utils/storageKeys'
+import ReasoningPanel from '../components/ReasoningPanel'
+import AgentThinkingLoader, { AgentSignals } from '../components/AgentThinkingLoader'
+import BackButton from '../components/BackButton'
 
 // Exercise card colors rotate through this palette.
 const EXERCISE_COLORS = [
@@ -23,6 +26,34 @@ const ADJUST_OPTIONS: Array<{ id: AdjustType; icon: string }> = [
   { id: 'swap', icon: '🔄' },
 ]
 const PLAN_DRAFT_VERSION = 2
+
+// Mini reasoning thoughts per adjust type
+const ADJUST_THOUGHTS: Record<string, { zh: string[]; en: string[] }> = {
+  low_energy: {
+    zh: ['🛌 检测到今日状态偏低…', '📉 降低训练容量和强度…', '✅ 保留核心动作，减少疲劳…'],
+    en: ['🛌 Low energy detected…', '📉 Reducing volume and intensity…', '✅ Keeping essentials, cutting fatigue…'],
+  },
+  high_intensity: {
+    zh: ['⚡ 状态良好，可以冲击…', '📈 提升组数和重量建议…', '✅ 安全范围内最大化训练效果…'],
+    en: ['⚡ Strong energy detected…', '📈 Increasing sets and weight targets…', '✅ Maximizing output within safe range…'],
+  },
+  short_time: {
+    zh: ['⏱ 时间有限，精简方案…', '🎯 保留最高效动作…', '✅ 浓缩训练，不妥协效果…'],
+    en: ['⏱ Limited time detected…', '🎯 Keeping highest-impact moves…', '✅ Condensed session, full effectiveness…'],
+  },
+  swap: {
+    zh: ['🔄 分析已选动作的替代方案…', '🎯 匹配相近肌群和强度…', '✅ 替换完成，保持训练目标…'],
+    en: ['🔄 Analyzing alternatives for selected moves…', '🎯 Matching muscle group and intensity…', '✅ Swapped — goal maintained…'],
+  },
+  custom: {
+    zh: ['🤔 理解自定义调整需求…', '🎯 按需重新规划…', '✅ 计划已根据需求调整…'],
+    en: ['🤔 Understanding custom request…', '🎯 Replanning accordingly…', '✅ Plan adjusted to your request…'],
+  },
+  default: {
+    zh: ['🤔 重新分析训练需求…', '🎯 调整训练参数…', '✅ 优化计划中…'],
+    en: ['🤔 Re-analyzing training needs…', '🎯 Adjusting parameters…', '✅ Optimizing plan…'],
+  },
+}
 
 function isMuscleGroup(value: string | null): value is MuscleGroup {
   return value === 'legs' || value === 'chest' || value === 'back' || value === 'shoulders' || value === 'arms' || value === 'full_body'
@@ -192,43 +223,20 @@ function ExerciseItem({
   )
 }
 
-// Loading state.
-
-function LoadingState({ message }: { message: string }) {
-  const [dots, setDots] = useState(1)
-  useEffect(() => {
-    const t = setInterval(() => setDots((d) => (d % 3) + 1), 480)
-    return () => clearInterval(t)
-  }, [])
-
-  return (
-    <div className="flex flex-col items-center justify-center flex-1 gap-7 py-20">
-      <div className="relative w-20 h-20">
-        <div
-          className="absolute inset-0 rounded-full border-[1.5px] border-transparent animate-spin-ring"
-          style={{ borderTopColor: '#C8A96E', borderRightColor: 'rgba(200,169,110,0.3)' }}
-        />
-        <div className="absolute inset-3 rounded-full" style={{ border: '1px solid rgba(200,169,110,0.15)' }} />
-        <span className="absolute inset-0 flex items-center justify-center text-xl" style={{ color: 'rgba(200,169,110,0.7)' }}>✦</span>
-      </div>
-      <div className="text-center space-y-1.5">
-        <p className="text-[14px] font-light" style={{ color: 'rgba(26,24,20,0.65)' }}>{message}</p>
-        <p className="text-[12px] font-light" style={{ color: 'rgba(26,24,20,0.25)' }}>
-          {'·'.repeat(dots)}
-        </p>
-      </div>
-    </div>
-  )
-}
-
 // Error state.
+
+function errorIcon(msg: string) {
+  if (msg.includes('网络') || msg.includes('network') || msg.includes('No network')) return '📶'
+  if (msg.includes('频繁') || msg.includes('Too many')) return '⏳'
+  return '⚠️'
+}
 
 function ErrorState({ message, onRetry }: { message: string; onRetry: () => void }) {
   const coachCopy = useCoachCopy()
 
   return (
     <div className="flex flex-col items-center justify-center flex-1 gap-5 py-20 px-8">
-      <span className="text-3xl">⚠️</span>
+      <span className="text-3xl">{errorIcon(message)}</span>
       <p className="text-[13px] font-light text-center" style={{ color: 'rgba(26,24,20,0.55)' }}>{message}</p>
       <button
         className="rounded-xl px-6 py-2.5 text-[13px] font-light"
@@ -250,46 +258,128 @@ export default function PlanPage() {
   const sessionId = searchParams.get('session_id')
   const routeMuscleGroup = searchParams.get('muscle_group')
 
-  const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading')
+  const [status, setStatus] = useState<'loading' | 'reasoning' | 'ready' | 'error'>('loading')
   const [plan, setPlan] = useState<TemporaryPlanResponse | null>(null)
   const [exercises, setExercises] = useState<Exercise[]>([])
   const [errorMsg, setErrorMsg] = useState('')
+  const [reasoning, setReasoning] = useState<PlanReasoning | null>(null)
+  const pendingPlanRef = useRef<TemporaryPlanResponse | null>(null)
+  // planArrived gates the chain's final step — chain stays pulsing until API returns
+  const [planArrived, setPlanArrived] = useState(false)
+  const pendingStatusRef = useRef<'reasoning' | null>(null)
+  // Real signal values shown in the reasoning chain steps
+  const [signals, setSignals] = useState<AgentSignals>({})
+  const abortRef = useRef<AbortController | null>(null)
 
   const [adjustText, setAdjustText] = useState('')
   const [isAdjusting, setIsAdjusting] = useState(false)
+  const [adjustThoughtIndex, setAdjustThoughtIndex] = useState(0)
+  const [adjustThoughts, setAdjustThoughts] = useState<string[]>([])
+  const [adjustThoughtVisible, setAdjustThoughtVisible] = useState(true)
   const [selectedExerciseIds, setSelectedExerciseIds] = useState<string[]>([])
   const [selectedMuscleGroup, setSelectedMuscleGroup] = useState<MuscleGroup | 'auto'>(isMuscleGroup(routeMuscleGroup) ? routeMuscleGroup : 'auto')
 
+  const applyPlan = (generated: TemporaryPlanResponse, muscleGroup: MuscleGroup | 'auto', usingDraft: boolean) => {
+    setSelectedMuscleGroup(sessionId || usingDraft ? generated.plan.muscle_group as MuscleGroup : muscleGroup)
+    if (!sessionId) writePlanDraft(generated)
+    setPlan(generated)
+    const displayExercises = coloredExercises(generated.exercises, coachCopy)
+    setExercises(displayExercises)
+    setSelectedExerciseIds(displayExercises.map((ex) => ex.id))
+    setStatus('ready')
+  }
+
   const loadPlan = async (muscleGroup: MuscleGroup | 'auto' = selectedMuscleGroup) => {
+    abortRef.current?.abort()
+    const controller = new AbortController()
+    abortRef.current = controller
+
     setStatus('loading')
+    setSignals({})
+    setReasoning(null)
+    pendingPlanRef.current = null
+    pendingStatusRef.current = null
+    setPlanArrived(false)
     setErrorMsg('')
     try {
       const today = formatLocalDate(new Date())
       const draft = !sessionId ? readPlanDraft(today) : null
       const usingDraft = Boolean(draft)
-      const generated = sessionId
-        ? normalizeSavedSession(await getTrainingSession(Number(sessionId)))
-        : draft
-          ? draft
-        : await generatePlan({
-          session_date: today,
-          ...(muscleGroup !== 'auto' ? { muscle_group: muscleGroup } : {}),
-          duration_minutes: 55,
+
+      if (draft || sessionId) {
+        // Drafts / saved sessions — skip chain entirely
+        const generated = sessionId
+          ? normalizeSavedSession(await getTrainingSession(Number(sessionId)))
+          : draft!
+        applyPlan(generated, muscleGroup, usingDraft)
+        return
+      }
+
+      // Parallel signal fetches — fast GETs, update chain text as they land
+      getTodayCheckIn()
+        .then((res) => {
+          if (controller.signal.aborted || !res.exists || !res.checkin) return
+          setSignals((prev) => ({
+            ...prev,
+            recoveryScore: res.checkin!.recovery_score,
+            sleepHours: res.checkin!.sleep_hours,
+            energyLevel: res.checkin!.energy_level,
+          }))
         })
-      setSelectedMuscleGroup(sessionId || usingDraft ? generated.plan.muscle_group : muscleGroup)
-      if (!sessionId) writePlanDraft(generated)
-      setPlan(generated)
-      const displayExercises = coloredExercises(generated.exercises, coachCopy)
-      setExercises(displayExercises)
-      setSelectedExerciseIds(displayExercises.map((ex) => ex.id))
-      setStatus('ready')
+        .catch(() => {/* silent */})
+
+      getTrainingHistory(7)
+        .then((res) => {
+          if (controller.signal.aborted) return
+          const last = res.sessions[0]
+          setSignals((prev) => ({
+            ...prev,
+            sessionsCount: res.sessions.length,
+            lastMuscleGroup: last?.muscle_group,
+          }))
+        })
+        .catch(() => {/* silent */})
+
+      // Fresh generation — signal chain once data arrives; chain fires onComplete to switch view
+      const generated = await generatePlan({
+        session_date: today,
+        ...(muscleGroup !== 'auto' ? { muscle_group: muscleGroup } : {}),
+        duration_minutes: 55,
+      }, controller.signal)
+
+      if (generated.reasoning) {
+        pendingPlanRef.current = generated
+        setReasoning(generated.reasoning)
+        pendingStatusRef.current = 'reasoning'
+        setPlanArrived(true) // unblocks the chain's final step
+      } else {
+        applyPlan(generated, muscleGroup, false)
+      }
     } catch (err) {
-      setErrorMsg((err as Error).message ?? coachCopy.plan.generationFailed)
+      if ((err as Error).name === 'AbortError') return
+      setErrorMsg(classifyApiError(err, lang, coachCopy.plan.generationFailed))
       setStatus('error')
     }
   }
 
+  // Called by AgentThinkingLoader once every step (incl. the final one) has completed
+  const handleChainComplete = () => {
+    if (pendingStatusRef.current === 'reasoning') {
+      pendingStatusRef.current = null
+      setStatus('reasoning')
+    }
+  }
+
+  // Called when user clicks "Generate My Plan" on the reasoning panel
+  const handleReasoningComplete = () => {
+    if (pendingPlanRef.current) {
+      applyPlan(pendingPlanRef.current, selectedMuscleGroup, false)
+      pendingPlanRef.current = null
+    }
+  }
+
   useEffect(() => { loadPlan(isMuscleGroup(routeMuscleGroup) ? routeMuscleGroup : selectedMuscleGroup) }, [sessionId, routeMuscleGroup])
+  useEffect(() => () => { abortRef.current?.abort() }, [])
 
   const regenerateWithMuscleGroup = (muscleGroup: MuscleGroup | 'auto') => {
     if (isAdjusting) return
@@ -307,6 +397,11 @@ export default function PlanPage() {
       return
     }
     setAdjustText('')
+    // Set mini-reasoning thoughts for this adjust type
+    const thoughtSet = ADJUST_THOUGHTS[adjustType] ?? ADJUST_THOUGHTS.default
+    setAdjustThoughts(thoughtSet[lang])
+    setAdjustThoughtIndex(0)
+    setAdjustThoughtVisible(true)
     setIsAdjusting(true)
 
     const sorted = [...plan.exercises].sort((a, b) => a.sort_order - b.sort_order)
@@ -377,19 +472,30 @@ export default function PlanPage() {
     )
   }
 
-  const coachNote = plan ? (isAdjusting ? coachCopy.plan.thinking : adjustText || plan.plan.ai_note) : ''
+  const rawLang = useAppLanguage()
+  const lang: 'zh' | 'en' = rawLang === 'zh-CN' ? 'zh' : 'en'
+
+  // Cycle through adjustThoughts while isAdjusting
+  useEffect(() => {
+    if (!isAdjusting || adjustThoughts.length === 0) return
+    const show = setTimeout(() => setAdjustThoughtVisible(false), 820)
+    const next = setTimeout(() => {
+      setAdjustThoughtIndex((i) => (i + 1) % adjustThoughts.length)
+      setAdjustThoughtVisible(true)
+    }, 820 + 200)
+    return () => {
+      clearTimeout(show)
+      clearTimeout(next)
+    }
+  }, [adjustThoughtIndex, isAdjusting, adjustThoughts])
+
+  const coachNote = plan ? (adjustText || plan.plan.ai_note) : ''
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ background: '#FAFAF8', color: '#1A1814' }}>
+    <div className="h-dvh flex flex-col overflow-hidden" style={{ background: '#FAFAF8', color: '#1A1814' }}>
       {/* Header */}
       <div className="flex items-center gap-3 px-5 pt-14 pb-4 flex-shrink-0">
-        <button
-          className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-light"
-          style={{ background: 'rgba(26,24,20,0.05)', border: '1px solid rgba(26,24,20,0.08)', color: 'rgba(26,24,20,0.45)' }}
-          onClick={() => navigate('/week')}
-        >
-          ←
-        </button>
+        <BackButton to="/week" />
         <div>
           <h1 className="text-[17px] font-light tracking-wide">{coachCopy.plan.title}</h1>
         </div>
@@ -397,9 +503,25 @@ export default function PlanPage() {
 
       <AnimatePresence mode="wait">
         {status === 'loading' && (
-          <motion.div key="loading" className="flex flex-col flex-1"
+          <motion.div key="loading" className="flex flex-col flex-1 overflow-hidden"
             exit={{ opacity: 0 }} transition={{ duration: 0.25 }}>
-            <LoadingState message={coachCopy.plan.loading} />
+            <AgentThinkingLoader isDataReady={planArrived} onComplete={handleChainComplete} signals={signals} />
+          </motion.div>
+        )}
+
+        {status === 'reasoning' && (
+          <motion.div
+            key="reasoning"
+            className="flex flex-col flex-1 overflow-y-auto scrollbar-hide"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            <ReasoningPanel
+              reasoning={reasoning!}
+              onComplete={handleReasoningComplete}
+            />
           </motion.div>
         )}
 
@@ -420,20 +542,38 @@ export default function PlanPage() {
           >
             {/* Overview */}
             <div
-              className="sticky top-0 z-20 rounded-2xl p-4"
+              className="rounded-2xl p-4"
               style={{ background: 'rgba(200,169,110,0.06)', border: '1px solid rgba(200,169,110,0.18)' }}
             >
               <div className="flex gap-5 text-[11px] font-light mb-3" style={{ color: 'rgba(26,24,20,0.38)' }}>
                 <span>{coachCopy.plan.duration(plan.plan.duration_minutes)}</span>
                 <span>{coachCopy.plan.exercisesCount(exercises.length)}</span>
               </div>
-              <p className="text-[12px] font-light leading-relaxed" style={{ color: 'rgba(26,24,20,0.55)' }}>
-                <span style={{ color: '#C8A96E', marginRight: 6 }}>✦</span>
-                {coachNote}
-                {isAdjusting && (
-                  <span className="inline-block w-0.5 h-3.5 bg-current ml-1 animate-pulse align-middle" />
-                )}
-              </p>
+              {isAdjusting && adjustThoughts.length > 0 ? (
+                <div className="flex items-center gap-1.5 min-h-[1.75rem]">
+                  <span style={{ color: '#C8A96E', flexShrink: 0 }}>✦</span>
+                  <AnimatePresence mode="wait">
+                    {adjustThoughtVisible && (
+                      <motion.span
+                        key={adjustThoughtIndex}
+                        initial={{ opacity: 0, y: 5 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -5 }}
+                        transition={{ duration: 0.2, ease: 'easeOut' }}
+                        className="text-[12px] font-light leading-relaxed"
+                        style={{ color: 'rgba(26,24,20,0.55)' }}
+                      >
+                        {adjustThoughts[adjustThoughtIndex]}
+                      </motion.span>
+                    )}
+                  </AnimatePresence>
+                </div>
+              ) : (
+                <p className="text-[12px] font-light leading-relaxed" style={{ color: 'rgba(26,24,20,0.55)' }}>
+                  <span style={{ color: '#C8A96E', marginRight: 6 }}>✦</span>
+                  {coachNote}
+                </p>
+              )}
             </div>
 
             {/* Muscle group */}

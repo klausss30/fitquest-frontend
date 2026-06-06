@@ -2,11 +2,12 @@ import { useNavigate } from 'react-router-dom'
 import { useEffect, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import { DayData, DayStatus, TrainingSession, WeekPlanDay } from '../types'
-import { getWeekPlan, getWeekSessions } from '../services/api'
+import { getTodayCheckIn, getWeekPlan, getWeekSessions } from '../services/api'
 import { CoachCopy, useAppLanguage, useCoachCopy } from '../copy/coachCopy'
 import { useAuth } from '../context/AuthContext'
 import { readWeekPlanCache, writeWeekPlanCache } from '../utils/weekPlanCache'
 import WorkoutCoachIcon from '../components/coach/WorkoutCoachIcon'
+import BackButton from '../components/BackButton'
 
 interface LevelStyle {
   bg: string
@@ -64,11 +65,17 @@ function getCurrentWeekDays(coachCopy: CoachCopy): Array<DayData & { dateKey: st
   })
 }
 
-function pickMessage(options: string[]) {
-  return options[Math.floor(Math.random() * options.length)]
+function pickMessage(options: string[], seed: number) {
+  return options[Math.abs(seed) % options.length]
 }
 
-function getCoachMessage(todayWorkout: string | undefined, sessions: TrainingSession[], coachCopy: CoachCopy) {
+function getMessageSeed(workoutType: string | undefined, sessionsLen: number): number {
+  const now = new Date()
+  const doy = Math.floor((now.getTime() - new Date(now.getFullYear(), 0, 0).getTime()) / 86_400_000)
+  return doy * 1000 + sessionsLen * 7 + (workoutType?.length ?? 0)
+}
+
+function getCoachMessage(todayWorkout: string | undefined, sessions: TrainingSession[], coachCopy: CoachCopy, seed: number) {
   const today = new Date()
   const yesterday = new Date(today)
   yesterday.setDate(today.getDate() - 1)
@@ -77,18 +84,18 @@ function getCoachMessage(todayWorkout: string | undefined, sessions: TrainingSes
   const workout = todayWorkout ?? coachCopy.week.fallbackWorkout
 
   if (yesterdaySession) {
-    return pickMessage(coachCopy.week.coachMessages.yesterday(workout, yesterdaySession.day_type))
+    return pickMessage(coachCopy.week.coachMessages.yesterday(workout, yesterdaySession.day_type), seed)
   }
 
   if (completedThisWeek >= 2) {
-    return pickMessage(coachCopy.week.coachMessages.many(workout, completedThisWeek))
+    return pickMessage(coachCopy.week.coachMessages.many(workout, completedThisWeek), seed)
   }
 
   if (completedThisWeek === 1) {
-    return pickMessage(coachCopy.week.coachMessages.one(workout))
+    return pickMessage(coachCopy.week.coachMessages.one(workout), seed)
   }
 
-  return pickMessage(coachCopy.week.coachMessages.none(workout))
+  return pickMessage(coachCopy.week.coachMessages.none(workout), seed)
 }
 
 function getLevelStyle(status: DayStatus, coachCopy: CoachCopy): LevelStyle {
@@ -191,31 +198,44 @@ export default function WeekPage() {
   const [weekPlanDays, setWeekPlanDays] = useState<WeekPlanDay[]>([])
   const [error, setError] = useState('')
   const [coachMessage, setCoachMessage] = useState('')
+  // True once session data has arrived — gates today's node so it never shows a
+  // stale plan muscle-group before we know whether a session exists for today.
+  const [sessionsLoaded, setSessionsLoaded] = useState(false)
 
   useEffect(() => {
     if (!user) return
 
+    setSessionsLoaded(false)
     const weekStart = formatDateKey(getWeekStart(new Date()))
     const cachedPlan = readWeekPlanCache(user.id, weekStart, appLanguage)
 
     setError('')
+
     if (cachedPlan) {
+      // Cache hit — set plan for future/past days immediately; sessions will
+      // settle today's node once they arrive (avoids flash to wrong muscle group).
       setWeekPlanDays(cachedPlan.days)
+      getWeekSessions(weekStart)
+        .then((data) => { setSessions(data.sessions); setSessionsLoaded(true) })
+        .catch((err) => { setError((err as Error).message); setSessionsLoaded(true) })
     } else {
-      setWeekPlanDays([])
-    }
-
-    getWeekSessions(weekStart)
-      .then((data) => setSessions(data.sessions))
-      .catch((err) => setError((err as Error).message))
-
-    if (!cachedPlan) {
-      getWeekPlan(weekStart)
-        .then((data) => {
-          setWeekPlanDays(data.days)
-          writeWeekPlanCache(user.id, appLanguage, data)
-        })
-        .catch(() => setWeekPlanDays([]))
+      // No cache — fetch both in parallel, batch both setState calls so today's
+      // node only re-renders once (not twice with separate arrivals).
+      Promise.allSettled([
+        getWeekSessions(weekStart),
+        getWeekPlan(weekStart),
+      ]).then(([sessionsResult, planResult]) => {
+        if (sessionsResult.status === 'fulfilled') {
+          setSessions(sessionsResult.value.sessions)
+        } else {
+          setError((sessionsResult.reason as Error).message ?? '')
+        }
+        if (planResult.status === 'fulfilled') {
+          setWeekPlanDays(planResult.value.days)
+          writeWeekPlanCache(user.id, appLanguage, planResult.value)
+        }
+        setSessionsLoaded(true)
+      })
     }
   }, [appLanguage, user])
 
@@ -225,22 +245,28 @@ export default function WeekPage() {
   const displayWeek = getCurrentWeekDays(coachCopy).map((day) => {
     const session = sessionByDate.get(day.dateKey)
     const plannedDay = planByDate.get(day.dateKey)
+    const isToday = day.dateKey === todayKey
 
     if (session) {
       return {
         ...day,
         workoutType: session.day_type,
         muscleGroup: session.muscle_group,
-        status: day.dateKey === todayKey ? 'today' : 'done' as DayStatus,
+        status: isToday ? 'today' : 'done' as DayStatus,
       }
     }
 
     if (plannedDay) {
+      // For today: don't apply the plan's muscle group until sessions have loaded.
+      // This prevents a flash when the cached plan says e.g. "shoulder" but the
+      // completed session (arriving shortly after) says "full_body".
+      if (isToday && !sessionsLoaded) return day
+
       return {
         ...day,
         workoutType: plannedDay.muscle_group === 'rest' ? undefined : plannedDay.day_type,
         muscleGroup: plannedDay.muscle_group,
-        status: plannedDay.muscle_group === 'rest' ? 'rest' : day.dateKey === todayKey ? 'today' : 'future' as DayStatus,
+        status: plannedDay.muscle_group === 'rest' ? 'rest' : isToday ? 'today' : 'future' as DayStatus,
       }
     }
 
@@ -251,9 +277,24 @@ export default function WeekPage() {
   const todayPlan = weekPlanDays.find((day) => day.session_date === todayKey && day.muscle_group !== 'rest')
   const planPath = todayPlan ? `/plan?muscle_group=${todayPlan.muscle_group}` : '/plan'
 
+  const handleTrainToday = async () => {
+    try {
+      const res = await getTodayCheckIn()
+      if (res.exists) {
+        navigate(planPath)
+      } else {
+        navigate(`/checkin?redirect=${encodeURIComponent(planPath)}`)
+      }
+    } catch {
+      // If the check fails for any reason, proceed directly to plan
+      navigate(planPath)
+    }
+  }
+
   useEffect(() => {
-    setCoachMessage(getCoachMessage(today?.workoutType, sessions, coachCopy))
-  }, [sessions, today?.workoutType, coachCopy])
+    const seed = getMessageSeed(today?.workoutType, sessions.length)
+    setCoachMessage(getCoachMessage(today?.workoutType, sessions, coachCopy, seed))
+  }, [sessions.length, today?.workoutType, coachCopy])
 
   useEffect(() => {
     window.setTimeout(() => {
@@ -274,13 +315,7 @@ export default function WeekPage() {
           style={{ background: 'linear-gradient(180deg, #F7FBF4 76%, rgba(247,251,244,0))' }}
         >
           <div className="flex items-center gap-3">
-            <button
-              className="flex h-9 w-9 items-center justify-center rounded-full text-sm"
-              style={{ background: '#FFFFFF', border: '1px solid rgba(26,24,20,0.08)', color: 'rgba(26,24,20,0.48)' }}
-              onClick={() => navigate('/')}
-            >
-              ←
-            </button>
+            <BackButton to="/" />
 
             <div className="flex min-w-0 flex-1 items-start justify-between gap-3">
               <div className="min-w-0">
@@ -325,7 +360,7 @@ export default function WeekPage() {
                   day={day}
                   index={index}
                   coachCopy={coachCopy}
-                  onClick={day.status === 'today' ? () => navigate(planPath) : undefined}
+                  onClick={day.status === 'today' ? handleTrainToday : undefined}
                 />
               </div>
             ))}
@@ -345,7 +380,7 @@ export default function WeekPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.48, duration: 0.36 }}
             whileTap={{ scale: 0.97 }}
-            onClick={() => navigate(planPath)}
+            onClick={handleTrainToday}
           >
             {coachCopy.week.cta}
           </motion.button>
