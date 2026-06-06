@@ -44,7 +44,9 @@ export function classifyApiError(err: unknown, lang: 'zh' | 'en', fallback?: str
     if (e.message.includes('太频繁') || e.message.includes('rate') || e.message.includes('429')) {
       return lang === 'zh' ? '请求太频繁，请稍后再试' : 'Too many requests — please wait a moment'
     }
-    return e.message
+    // Don't leak Chinese error text in English mode
+    const hasChinese = /[一-鿿]/.test(e.message)
+    if (!hasChinese || lang === 'zh') return e.message
   }
 
   return fallback ?? (lang === 'zh' ? '请求失败，请稍后重试' : 'Request failed — please try again')
