@@ -44,6 +44,19 @@ export function classifyApiError(err: unknown, lang: 'zh' | 'en', fallback?: str
     if (e.message.includes('太频繁') || e.message.includes('rate') || e.message.includes('429')) {
       return lang === 'zh' ? '请求太频繁，请稍后再试' : 'Too many requests — please wait a moment'
     }
+    // Auth errors — translate known English keys for Chinese users
+    if (e.message.includes('Email already registered')) {
+      return lang === 'zh' ? '该邮箱已注册' : 'Email already registered'
+    }
+    if (e.message.includes('Incorrect email or password')) {
+      return lang === 'zh' ? '邮箱或密码错误' : 'Incorrect email or password'
+    }
+    if (e.message.includes('Password must be at least')) {
+      return lang === 'zh' ? '密码不能少于 6 位' : e.message
+    }
+    if (e.message.includes('valid email')) {
+      return lang === 'zh' ? '请输入有效的邮箱地址' : e.message
+    }
     // Don't leak Chinese error text in English mode
     const hasChinese = /[一-鿿]/.test(e.message)
     if (!hasChinese || lang === 'zh') return e.message
