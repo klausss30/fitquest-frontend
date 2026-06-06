@@ -1,201 +1,103 @@
-# FitQuest Frontend
+# FitQuest Reasoning Agent — Frontend
 
-FitQuest is a mobile-first AI fitness coach app that turns daily training into a lightweight quest flow. Instead of behaving like a traditional workout tracker, the app speaks from the perspective of a coach: it helps users set up a training profile, plans the week, generates a workout for the day, guides the session, and records completed training.
+React + TypeScript frontend for FitQuest, a multi-agent AI fitness coaching platform. Submitted to the **Microsoft Agents League Hackathon** (Reasoning Agents track).
 
-The current frontend focuses on the core experience: authentication, onboarding, AI-assisted planning, editable workout plans, guided training, automatic workout saving, and read-only training history.
-
-## Product Highlights
-
-- Coach-like product voice across the app
-- Game-inspired weekly training map
-- Animated stick-figure coach system for onboarding, weekly plans, workout categories, and completion feedback
-- AI-generated temporary plans that are not saved as history until the user finishes training
-- Local draft handling so an unfinished daily plan can be revisited
-- Bilingual interface support for Chinese and English
-- Mobile-first layout with Vercel-friendly SPA routing
-
-## Core Flow
-
-```text
-register / login
--> onboarding profile
--> weekly training map
--> generate today's plan
--> edit or adjust plan
--> guided workout
--> auto-save completed session
--> read-only training history
-```
-
-AI-generated plans are treated as temporary drafts. A generated plan does not become a training record until the user completes the workout. This keeps planning and history separate, which is important for avoiding false training records.
-
-## Features
-
-- Email/password registration and login
-- New-user onboarding with training profile setup
-- Profile fields for experience level, goal, gender, height, and weight
-- Weekly plan view with completed sessions, recovery days, and planned training days
-- Cached weekly plan handling to avoid regenerating the same week every time the page opens
-- AI-generated daily workout plans
-- Plan adjustments for low energy, shorter time, higher intensity, and exercise swaps
-- Editable workout plan before training:
-  - reorder exercises
-  - edit sets and reps
-  - edit weighted movements
-  - keep bodyweight movements weight-locked
-- Guided workout mode with set progression and rest countdowns
-- Automatic save after workout completion
-- Read-only training history and session detail pages
-- Settings page for profile updates, language preference, and logout
-- Local cleanup for drafts and cached plans when the user logs out, changes profile, or changes language
-
-## UI Direction
-
-FitQuest uses a friendly animated stick-figure coach as the central visual language. The coach appears in small, reusable SVG components rather than static image assets, which makes the character easy to adapt for different states:
-
-- login coach with dumbbell animation
-- onboarding coach with profile/checklist animation
-- weekly plan coach message avatar
-- workout-category icons such as squat, push-up, pull-up, dumbbell fly, full-body movement, and sleeping recovery day
-- celebration animation after a workout is completed
-
-This keeps the UI lightweight while leaving room for richer exercise demonstrations later.
+Unlike traditional fitness apps with static programmes, FitQuest exposes the AI reasoning process directly in the UI — users can watch agents analyse their recovery score, training history, and daily conditions in real time before a plan is generated.
 
 ## Tech Stack
 
-- React 18
-- TypeScript
-- Vite
-- React Router
-- Framer Motion
-- Tailwind CSS
+- **Framework**: React 18 + TypeScript + Vite
+- **Styling**: Tailwind CSS
+- **Animations**: Framer Motion
+- **Routing**: React Router v6
+- **Deployment**: Vercel
+
+## Quick Start
+
+### Prerequisites
+
+- Node.js 18+
+- The backend API running (see `fitness app backend/README.md`)
+
+### Run locally
+
+```bash
+git clone <repo>
+cd "fitness app frontend"
+npm install
+npm run dev
+# App available at http://localhost:5173
+```
+
+The app connects to the backend at the URL configured in `src/services/api.ts`. For local development this defaults to `http://localhost:3001`.
+
+## Features
+
+### Multi-Agent Reasoning UI
+- **Live reasoning chain** — animated step-by-step display of each agent's decision process with real signal values (recovery score, sleep hours, session count)
+- **Agent A (Training)** — analyses recovery, history, and daily check-in to generate a personalised workout
+- **Agent B (Nutrition)** — reads Agent A's output to deliver cross-domain nutrition advice from a single check-in
+
+### Workout Flow
+- AI-generated personalised plans based on fitness level, goals, and history
+- Real-time plan adjustment: low-energy mode, time-shortened sessions, intensity scaling, exercise swap
+- Live workout tracker with set/rep logging and rest timers
+- Session saving with full exercise history
+
+### Daily Check-In
+- Sleep, energy, stress, and optional weight tracking
+- Recovery score (0–100) computed from inputs
+- Instant display from localStorage cache — no loading flash on revisit
+
+### Dashboard & History
+- Training streak and weekly session count (cached for instant render)
+- Full session history with exercise detail view
+- Weekly schedule view
+
+### Nutrition
+- AI macro targets (calories, protein, carbs, fat) based on body metrics and training load
+- Meal suggestions with calorie estimates
+- Agent reasoning display
+
+### Settings
+- Bilingual support: English / Chinese (system-detected or manual)
+- Profile editing (experience level, goal, height, weight, gender)
 
 ## Project Structure
 
-```text
+```
 src/
-  components/   Reusable UI and coach animation components
-  context/      Auth state and route protection helpers
-  copy/         Centralized Chinese/English product copy
-  data/         Static UI data
-  pages/        Route-level screens
-  services/     API client functions
-  types/        Shared TypeScript types
-  utils/        Local storage, drafts, and weekly plan cache helpers
+  components/
+    AgentThinkingLoader   — Animated reasoning chain during AI loading
+    ReasoningChainLoader  — Shared step-by-step chain renderer
+    ReasoningPanel        — Post-generation reasoning display
+    BackButton            — Shared back navigation
+    coach/                — Animated coach icon components
+  pages/
+    HomePage              — Agent dashboard (stats, quick actions)
+    PlanPage              — AI plan generation + adjustment
+    WorkoutPage           — Live workout tracker
+    WeekPage              — Weekly schedule
+    CheckInPage           — Daily check-in form + recovery score
+    NutritionPage         — AI nutrition advice
+    RecordsPage           — Session history list
+    RecordDetailPage      — Session detail view
+    SettingsPage          — Language + profile settings
+    LoginPage / RegisterPage / OnboardingPage
+  copy/
+    coachCopy.ts          — All UI strings (English + Chinese), language hook
+  services/
+    api.ts                — API client + error classification
+  types/
+    index.ts              — Shared TypeScript types
+  utils/
+    planDrafts.ts         — localStorage plan draft helpers
+    storageKeys.ts        — Centralised localStorage key constants
+    weekPlanCache.ts      — Week plan cache helpers
 ```
 
-## Getting Started
+## AI Provider
 
-Install dependencies:
+The frontend sends `Accept-Language` headers that the backend uses to determine AI response language. No AI calls are made directly from the frontend — all AI requests go through the backend API.
 
-```bash
-npm install
-```
-
-Create a local environment file if you need to override the backend URL:
-
-```bash
-cp .env.example .env
-```
-
-```env
-VITE_API_PROXY_TARGET=http://localhost:5000
-VITE_API_BASE_URL=/api
-```
-
-Start the development server:
-
-```bash
-npm run dev
-```
-
-By default, the app runs at:
-
-```text
-http://127.0.0.1:5173
-```
-
-Build for production:
-
-```bash
-npm run build
-```
-
-Preview a production build:
-
-```bash
-npm run preview
-```
-
-## Backend Configuration
-
-This frontend expects a JSON API. In local development, Vite proxies frontend requests from:
-
-```text
-/api
-```
-
-to:
-
-```text
-http://localhost:5000
-```
-
-For production deployments, set `VITE_API_BASE_URL` to the deployed backend API base URL:
-
-```env
-VITE_API_BASE_URL=https://your-backend-domain.com/api
-```
-
-Authenticated requests use:
-
-```http
-Authorization: Bearer <token>
-```
-
-The app also sends `Accept-Language` with protected API requests:
-
-- `zh-CN` for Chinese
-- `en-US` for English
-
-The backend is expected to use this header when generating AI-facing content such as workout titles, coach notes, exercise names, and rationale text.
-
-## Main API Areas
-
-- `POST /api/auth/register`
-- `POST /api/auth/login`
-- `GET /api/me`
-- `PUT /api/profile`
-- `GET /api/week-plan`
-- `POST /api/plan/generate`
-- `POST /api/plan/adjust`
-- `POST /api/training-sessions`
-- `GET /api/training-sessions`
-- `GET /api/training-sessions/week`
-- `GET /api/training-sessions/:id`
-
-## State Handling
-
-FitQuest uses `localStorage` for lightweight client-side persistence:
-
-- auth token and current user snapshot
-- unsaved daily workout plan drafts
-- cached weekly plans by user, week start date, and language
-- language preference
-
-Drafts and cached weekly plans are cleared when they could become stale, such as after logout, profile updates, onboarding completion, language changes, or authentication expiry.
-
-## Deployment Notes
-
-The app includes a `vercel.json` rewrite so direct refreshes on client-side routes such as `/week`, `/plan`, and `/settings` resolve back to the React app instead of returning a 404.
-
-For production, make sure the frontend has access to a deployed backend and that `VITE_API_BASE_URL` is set during the Vercel build.
-
-## Future Improvements
-
-- Richer exercise-specific coach animations
-- More complete analytics around training consistency and progression
-- Better recovery recommendations based on recent completed sessions
-- Cross-device draft sync
-- More robust localization for generated and saved content
-- A more formal design system for reusable controls and motion patterns
+Error messages from the backend are automatically translated to the user's current language via `classifyApiError` in `api.ts`.

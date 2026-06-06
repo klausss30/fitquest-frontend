@@ -5,6 +5,7 @@ import { Exercise, AdjustType, MuscleGroup, PlanExercise, PlanReasoning, Session
 import { adjustPlan, classifyApiError, generatePlan, getTrainingHistory, getTrainingSession, getTodayCheckIn } from '../services/api'
 import { CoachCopy, useAppLanguage, useCoachCopy } from '../copy/coachCopy'
 import { LEGACY_PLAN_DRAFT_PREFIX, PLAN_DRAFT_PREFIX } from '../utils/storageKeys'
+import { formatLocalDate, readPlanDraft } from '../utils/planDrafts'
 import ReasoningPanel from '../components/ReasoningPanel'
 import AgentThinkingLoader, { AgentSignals } from '../components/AgentThinkingLoader'
 import BackButton from '../components/BackButton'
@@ -59,42 +60,9 @@ function isMuscleGroup(value: string | null): value is MuscleGroup {
   return value === 'legs' || value === 'chest' || value === 'back' || value === 'shoulders' || value === 'arms' || value === 'full_body'
 }
 
-function formatLocalDate(date: Date) {
-  const year = date.getFullYear()
-  const month = String(date.getMonth() + 1).padStart(2, '0')
-  const day = String(date.getDate()).padStart(2, '0')
-  return `${year}-${month}-${day}`
-}
-
-function getDraftKey(date: string) {
-  return `${PLAN_DRAFT_PREFIX}${date}`
-}
-
-function getLegacyDraftKey(date: string) {
-  return `${LEGACY_PLAN_DRAFT_PREFIX}${date}`
-}
-
-function readPlanDraft(date: string): TemporaryPlanResponse | null {
-  try {
-    const key = getDraftKey(date)
-    const legacyKey = getLegacyDraftKey(date)
-    const raw = localStorage.getItem(key) ?? localStorage.getItem(legacyKey)
-    if (!raw) return null
-    const parsed = JSON.parse(raw) as { version?: number; data?: TemporaryPlanResponse }
-    if (parsed.version !== PLAN_DRAFT_VERSION || !parsed.data) return null
-    if (!localStorage.getItem(key)) {
-      localStorage.setItem(key, raw)
-      localStorage.removeItem(legacyKey)
-    }
-    return parsed.data
-  } catch {
-    return null
-  }
-}
-
 function writePlanDraft(plan: TemporaryPlanResponse) {
-  localStorage.setItem(getDraftKey(plan.plan.session_date), JSON.stringify({ version: PLAN_DRAFT_VERSION, data: plan }))
-  localStorage.removeItem(getLegacyDraftKey(plan.plan.session_date))
+  localStorage.setItem(`${PLAN_DRAFT_PREFIX}${plan.plan.session_date}`, JSON.stringify({ version: PLAN_DRAFT_VERSION, data: plan }))
+  localStorage.removeItem(`${LEGACY_PLAN_DRAFT_PREFIX}${plan.plan.session_date}`)
 }
 
 function normalizeSavedSession(saved: SessionDetailResponse): TemporaryPlanResponse {
@@ -385,8 +353,8 @@ export default function PlanPage() {
     if (isAdjusting) return
     setSelectedMuscleGroup(muscleGroup)
     setAdjustText('')
-    localStorage.removeItem(getDraftKey(formatLocalDate(new Date())))
-    localStorage.removeItem(getLegacyDraftKey(formatLocalDate(new Date())))
+    localStorage.removeItem(`${PLAN_DRAFT_PREFIX}${formatLocalDate(new Date())}`)
+    localStorage.removeItem(`${LEGACY_PLAN_DRAFT_PREFIX}${formatLocalDate(new Date())}`)
     loadPlan(muscleGroup)
   }
 

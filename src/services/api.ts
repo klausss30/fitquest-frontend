@@ -41,10 +41,10 @@ export function classifyApiError(err: unknown, lang: 'zh' | 'en', fallback?: str
   // Server returned a structured error message (from apiFetch throw)
   if (e.message && !e.message.includes('请求失败') && !e.message.includes('Request failed')) {
     // Rate limit
-    if (e.message.includes('太频繁') || e.message.includes('rate') || e.message.includes('429')) {
+    if (e.message.includes('Too many requests') || e.message.includes('太频繁') || e.message.includes('429')) {
       return lang === 'zh' ? '请求太频繁，请稍后再试' : 'Too many requests — please wait a moment'
     }
-    // Auth errors — translate known English keys for Chinese users
+    // Auth errors
     if (e.message.includes('Email already registered')) {
       return lang === 'zh' ? '该邮箱已注册' : 'Email already registered'
     }
@@ -56,6 +56,20 @@ export function classifyApiError(err: unknown, lang: 'zh' | 'en', fallback?: str
     }
     if (e.message.includes('valid email')) {
       return lang === 'zh' ? '请输入有效的邮箱地址' : e.message
+    }
+    // Session / auth
+    if (e.message.includes('User not found') || e.message.includes('session expired')) {
+      return lang === 'zh' ? '登录已失效，请重新登录' : 'Session expired — please log in again'
+    }
+    // AI generation failures
+    if (e.message.includes('Failed to generate plan')) {
+      return lang === 'zh' ? '计划生成失败，请稍后重试' : 'Failed to generate plan. Please try again.'
+    }
+    if (e.message.includes('Failed to adjust plan')) {
+      return lang === 'zh' ? '训练计划调整失败，请稍后重试' : 'Failed to adjust plan. Please try again.'
+    }
+    if (e.message.includes('Failed to generate nutrition')) {
+      return lang === 'zh' ? '营养建议生成失败，请稍后重试' : 'Failed to generate nutrition advice. Please try again.'
     }
     // Don't leak Chinese error text in English mode
     const hasChinese = /[一-鿿]/.test(e.message)
