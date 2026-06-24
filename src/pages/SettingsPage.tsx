@@ -4,7 +4,7 @@ import { motion } from 'framer-motion'
 import { useAuth } from '../context/AuthContext'
 import { getMe, updateProfile } from '../services/api'
 import { ExperienceLevel, TrainingGoal } from '../types'
-import { LanguageMode, useCoachCopy, useLanguageMode, writeLanguageMode } from '../copy/coachCopy'
+import { useCoachCopy } from '../copy/coachCopy'
 import { clearPlanDrafts } from '../utils/planDrafts'
 import { clearWeekPlanCache } from '../utils/weekPlanCache'
 import BackButton from '../components/BackButton'
@@ -12,8 +12,8 @@ import BackButton from '../components/BackButton'
 const levelOptions: ExperienceLevel[] = ['beginner', 'intermediate', 'advanced']
 const goalOptions: TrainingGoal[] = ['muscle_gain', 'fat_loss', 'strength']
 
-type SettingsView = 'menu' | 'profile' | 'language'
-type PickerType = 'level' | 'goal' | 'language' | null
+type SettingsView = 'menu' | 'profile'
+type PickerType = 'level' | 'goal' | null
 
 function MenuItem({ title, subtitle, onClick, danger = false }: { title: string; subtitle?: string; onClick: () => void; danger?: boolean }) {
   return (
@@ -86,60 +86,19 @@ function SelectionSheet({
   )
 }
 
-function ConfirmDialog({
-  title,
-  message,
-  cancelLabel,
-  confirmLabel,
-  onCancel,
-  onConfirm,
-}: {
-  title: string
-  message: string
-  cancelLabel: string
-  confirmLabel: string
-  onCancel: () => void
-  onConfirm: () => void
-}) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center px-6" style={{ background: 'rgba(26,24,20,0.18)' }}>
-      <motion.div
-        className="w-full max-w-[330px] rounded-[28px] p-5 text-center"
-        style={{ background: '#FFFFFF', boxShadow: '0 18px 44px rgba(26,24,20,0.18)' }}
-        initial={{ scale: 0.94, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-      >
-        <p className="text-[17px] font-semibold">{title}</p>
-        <p className="mt-2 text-[12px] font-light leading-relaxed" style={{ color: 'rgba(26,24,20,0.52)' }}>{message}</p>
-        <div className="mt-5 grid grid-cols-2 gap-2">
-          <button className="rounded-2xl py-3 text-[13px] font-semibold" style={{ background: '#F7FBF4', color: 'rgba(26,24,20,0.52)' }} onClick={onCancel}>
-            {cancelLabel}
-          </button>
-          <button className="rounded-2xl py-3 text-[13px] font-semibold" style={{ background: '#57C878', color: '#FFFFFF' }} onClick={onConfirm}>
-            {confirmLabel}
-          </button>
-        </div>
-      </motion.div>
-    </div>
-  )
-}
-
 export default function SettingsPage() {
   const navigate = useNavigate()
   const { logout } = useAuth()
   const coachCopy = useCoachCopy()
-  const storedLanguageMode = useLanguageMode()
   const [view, setView] = useState<SettingsView>('menu')
   const [experienceLevel, setExperienceLevel] = useState<ExperienceLevel>('beginner')
   const [goal, setGoal] = useState<TrainingGoal>('muscle_gain')
   const [heightCm, setHeightCm] = useState('')
   const [weightKg, setWeightKg] = useState('')
-  const [languageMode, setLanguageMode] = useState<LanguageMode>(storedLanguageMode)
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [picker, setPicker] = useState<PickerType>(null)
-  const [pendingLanguage, setPendingLanguage] = useState<LanguageMode | null>(null)
 
   useEffect(() => {
     getMe()
@@ -152,10 +111,6 @@ export default function SettingsPage() {
       })
       .catch(() => undefined)
   }, [])
-
-  useEffect(() => {
-    setLanguageMode(storedLanguageMode)
-  }, [storedLanguageMode])
 
   const saveProfile = async () => {
     setError('')
@@ -184,18 +139,9 @@ export default function SettingsPage() {
     navigate('/login', { replace: true })
   }
 
-  const saveLanguage = (mode: LanguageMode) => {
-    setLanguageMode(mode)
-    writeLanguageMode(mode)
-    clearPlanDrafts()
-    clearWeekPlanCache()
-  }
-
-  const languageLabel = coachCopy.options.languageModes[languageMode].label
-  const pendingLanguageIsEnglish = pendingLanguage === 'en-US'
   const levelLabel = coachCopy.options.levels[experienceLevel]?.label ?? coachCopy.common.notSet
   const goalLabel = coachCopy.options.goals[goal]?.label ?? coachCopy.common.notSet
-  const headerTitle = view === 'profile' ? coachCopy.settings.profileTitle : view === 'language' ? coachCopy.settings.languageTitle : coachCopy.settings.title
+  const headerTitle = view === 'profile' ? coachCopy.settings.profileTitle : coachCopy.settings.title
   const handleBack = () => {
     if (view === 'menu') {
       navigate('/')
@@ -218,7 +164,6 @@ export default function SettingsPage() {
       {view === 'menu' && (
         <motion.div className="mt-8 flex flex-col gap-3" initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}>
           <MenuItem title={coachCopy.settings.editProfile} subtitle={coachCopy.settings.editProfileSub} onClick={() => setView('profile')} />
-          <MenuItem title={coachCopy.settings.language} subtitle={languageLabel} onClick={() => setView('language')} />
           <MenuItem title={coachCopy.settings.logout} subtitle={coachCopy.settings.logoutSub} danger onClick={handleLogout} />
         </motion.div>
       )}
@@ -250,15 +195,6 @@ export default function SettingsPage() {
         </motion.div>
       )}
 
-      {view === 'language' && (
-        <motion.div className="mt-8 flex flex-col gap-3" initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}>
-          <MenuItem title={coachCopy.settings.language} subtitle={languageLabel} onClick={() => setPicker('language')} />
-          <p className="px-1 text-[12px] font-light leading-relaxed" style={{ color: 'rgba(26,24,20,0.46)' }}>
-            {coachCopy.settings.languageNote(languageLabel)}
-          </p>
-        </motion.div>
-      )}
-
       {picker === 'level' && (
         <SelectionSheet
           title={coachCopy.settings.chooseLevel}
@@ -283,39 +219,6 @@ export default function SettingsPage() {
           onSelect={(value) => {
             setGoal(value as TrainingGoal)
             setPicker(null)
-          }}
-        />
-      )}
-
-      {picker === 'language' && (
-        <SelectionSheet
-          title={coachCopy.settings.chooseLanguage}
-          value={languageMode}
-          cancelLabel={coachCopy.common.cancel}
-          options={[
-            { value: 'system', ...coachCopy.options.languageModes.system },
-            { value: 'zh-CN', ...coachCopy.options.languageModes['zh-CN'] },
-            { value: 'en-US', ...coachCopy.options.languageModes['en-US'] },
-          ]}
-          onClose={() => setPicker(null)}
-          onSelect={(value) => {
-            setPicker(null)
-            if (value === languageMode) return
-            setPendingLanguage(value as LanguageMode)
-          }}
-        />
-      )}
-
-      {pendingLanguage && (
-        <ConfirmDialog
-          title={pendingLanguageIsEnglish ? 'Change language?' : coachCopy.settings.changeLanguageTitle}
-          message={pendingLanguageIsEnglish ? 'New workout plans and AI content will use English. Existing training records will not be translated or changed.' : coachCopy.settings.changeLanguageMessage}
-          cancelLabel={pendingLanguageIsEnglish ? 'Cancel' : coachCopy.common.cancel}
-          confirmLabel={pendingLanguageIsEnglish ? 'Confirm' : coachCopy.common.confirm}
-          onCancel={() => setPendingLanguage(null)}
-          onConfirm={() => {
-            saveLanguage(pendingLanguage)
-            setPendingLanguage(null)
           }}
         />
       )}

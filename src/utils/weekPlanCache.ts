@@ -1,16 +1,15 @@
-import { AppLanguage } from '../copy/coachCopy'
 import { WeekPlanResponse } from '../types'
 
 const WEEK_PLAN_CACHE_PREFIX = 'fitquest_week_plan_'
 const WEEK_PLAN_CACHE_VERSION = 1
 
-function getWeekPlanCacheKey(userId: number, weekStart: string, language: AppLanguage) {
-  return `${WEEK_PLAN_CACHE_PREFIX}${userId}_${weekStart}_${language}`
+function getWeekPlanCacheKey(userId: number, weekStart: string) {
+  return `${WEEK_PLAN_CACHE_PREFIX}${userId}_${weekStart}`
 }
 
-export function readWeekPlanCache(userId: number, weekStart: string, language: AppLanguage): WeekPlanResponse | null {
+export function readWeekPlanCache(userId: number, weekStart: string): WeekPlanResponse | null {
   try {
-    const raw = localStorage.getItem(getWeekPlanCacheKey(userId, weekStart, language))
+    const raw = localStorage.getItem(getWeekPlanCacheKey(userId, weekStart))
     if (!raw) return null
 
     const parsed = JSON.parse(raw) as { version?: number; data?: WeekPlanResponse }
@@ -23,9 +22,9 @@ export function readWeekPlanCache(userId: number, weekStart: string, language: A
   }
 }
 
-export function writeWeekPlanCache(userId: number, language: AppLanguage, data: WeekPlanResponse) {
+export function writeWeekPlanCache(userId: number, data: WeekPlanResponse) {
   localStorage.setItem(
-    getWeekPlanCacheKey(userId, data.week_start, language),
+    getWeekPlanCacheKey(userId, data.week_start),
     JSON.stringify({ version: WEEK_PLAN_CACHE_VERSION, data }),
   )
 }

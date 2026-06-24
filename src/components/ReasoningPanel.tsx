@@ -1,8 +1,5 @@
 import { motion } from 'framer-motion'
 import { PlanReasoning, RiskLevel } from '../types'
-import { useAppLanguage } from '../copy/coachCopy'
-
-// ── Config ────────────────────────────────────────────────────────────────────
 
 const RISK_COLOR: Record<RiskLevel, string> = {
   low:      '#57C878',
@@ -11,35 +8,18 @@ const RISK_COLOR: Record<RiskLevel, string> = {
 }
 
 const COPY = {
-  zh: {
-    title: 'AI 推理过程',
-    subtitle: '基于你的状态和历史，Agent 完成了以下分析',
-    steps: ['目标分析', '恢复状态', '风险评估', '训练历史', '今日决策'],
-    icons: ['🎯', '🛌', '⚠️', '📊', '✅'],
-    noCheckIn: '未记录今日状态，使用通用默认方案',
-    sessions: (n: number) => `近 7 天完成 ${n} 次训练`,
-    lastGroup: (g: string) => `上次训练：${g}`,
-    riskLabel: { low: '低风险', moderate: '中等风险', high: '需注意' },
-    recoveryScore: (s: number) => `恢复指数 ${s}/100`,
-    sleep: (h: number) => `睡眠 ${h}h`,
-    cta: '生成我的计划',
-  },
-  en: {
-    title: 'Agent Reasoning',
-    subtitle: 'Based on your status and history, the agent completed this analysis',
-    steps: ['Goal Analysis', 'Recovery', 'Risk Assessment', 'History', 'Decision'],
-    icons: ['🎯', '🛌', '⚠️', '📊', '✅'],
-    noCheckIn: 'No check-in recorded — using default parameters',
-    sessions: (n: number) => `${n} sessions completed in the last 7 days`,
-    lastGroup: (g: string) => `Last trained: ${g}`,
-    riskLabel: { low: 'Low Risk', moderate: 'Moderate', high: 'High Risk' },
-    recoveryScore: (s: number) => `Recovery ${s}/100`,
-    sleep: (h: number) => `Sleep ${h}h`,
-    cta: 'Generate My Plan',
-  },
+  title: 'Agent Reasoning',
+  subtitle: 'Based on your status and history, the agent completed this analysis',
+  steps: ['Goal Analysis', 'Recovery', 'Risk Assessment', 'History', 'Decision'],
+  icons: ['🎯', '🛌', '⚠️', '📊', '✅'],
+  noCheckIn: 'No check-in recorded. Using default parameters.',
+  sessions: (n: number) => `${n} sessions completed in the last 7 days`,
+  lastGroup: (g: string) => `Last trained: ${g}`,
+  riskLabel: { low: 'Low Risk', moderate: 'Moderate', high: 'High Risk' },
+  recoveryScore: (s: number) => `Recovery ${s}/100`,
+  sleep: (h: number) => `Sleep ${h}h`,
+  cta: 'Generate My Plan',
 }
-
-// ── Step content renderers ────────────────────────────────────────────────────
 
 function GoalContent({ r }: { r: PlanReasoning }) {
   return (
@@ -57,7 +37,7 @@ function GoalContent({ r }: { r: PlanReasoning }) {
   )
 }
 
-function RecoveryContent({ r, copy }: { r: PlanReasoning; copy: typeof COPY['zh'] }) {
+function RecoveryContent({ r, copy }: { r: PlanReasoning; copy: typeof COPY }) {
   if (!r.recovery_analysis) {
     return <p className="text-[11px] font-light" style={{ color: 'rgba(26,24,20,0.38)' }}>{copy.noCheckIn}</p>
   }
@@ -80,7 +60,7 @@ function RecoveryContent({ r, copy }: { r: PlanReasoning; copy: typeof COPY['zh'
   )
 }
 
-function RiskContent({ r, copy }: { r: PlanReasoning; copy: typeof COPY['zh'] }) {
+function RiskContent({ r, copy }: { r: PlanReasoning; copy: typeof COPY }) {
   const color = RISK_COLOR[r.risk_assessment.level]
   return (
     <div className="space-y-2">
@@ -102,7 +82,7 @@ function RiskContent({ r, copy }: { r: PlanReasoning; copy: typeof COPY['zh'] })
   )
 }
 
-function HistoryContent({ r, copy }: { r: PlanReasoning; copy: typeof COPY['zh'] }) {
+function HistoryContent({ r, copy }: { r: PlanReasoning; copy: typeof COPY }) {
   const ha = r.history_analysis
   return (
     <div className="space-y-1">
@@ -128,17 +108,13 @@ function DecisionContent({ r }: { r: PlanReasoning }) {
   )
 }
 
-// ── ReasoningPanel ────────────────────────────────────────────────────────────
-
 interface Props {
-  reasoning: PlanReasoning   // always fully populated when this component is shown
-  onComplete: () => void     // called when user clicks the CTA button
+  reasoning: PlanReasoning
+  onComplete: () => void
 }
 
 export default function ReasoningPanel({ reasoning, onComplete }: Props) {
-  const rawLang = useAppLanguage()
-  const lang: 'zh' | 'en' = rawLang === 'zh-CN' ? 'zh' : 'en'
-  const copy = COPY[lang]
+  const copy = COPY
 
   const renderContent = (index: number) => {
     switch (index) {
@@ -151,7 +127,6 @@ export default function ReasoningPanel({ reasoning, onComplete }: Props) {
     }
   }
 
-  // Container stagger: each child gets progressively longer delay
   const containerVariants = {
     hidden: {},
     show: {
@@ -166,7 +141,6 @@ export default function ReasoningPanel({ reasoning, onComplete }: Props) {
 
   return (
     <div className="flex flex-col flex-1 overflow-y-auto scrollbar-hide pb-32">
-      {/* Header */}
       <motion.div
         className="px-5 pt-2 pb-3"
         initial={{ opacity: 0, y: -8 }}
@@ -181,7 +155,6 @@ export default function ReasoningPanel({ reasoning, onComplete }: Props) {
         </p>
       </motion.div>
 
-      {/* Step cards — stagger on mount */}
       <motion.div
         className="px-5 flex flex-col gap-3"
         variants={containerVariants}
@@ -199,20 +172,17 @@ export default function ReasoningPanel({ reasoning, onComplete }: Props) {
               boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
             }}
           >
-            {/* Step header */}
             <div className="flex items-center gap-2 mb-2.5">
               <span className="text-base leading-none">{copy.icons[i]}</span>
               <p className="text-[11px] font-light tracking-[0.1em] uppercase" style={{ color: 'rgba(26,24,20,0.32)' }}>
                 {label}
               </p>
             </div>
-            {/* Step content */}
             {renderContent(i)}
           </motion.div>
         ))}
       </motion.div>
 
-      {/* CTA — fades in after cards */}
       <motion.div
         className="px-5 mt-5"
         initial={{ opacity: 0, y: 10 }}

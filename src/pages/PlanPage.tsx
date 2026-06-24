@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { motion, AnimatePresence, Reorder } from 'framer-motion'
 import { Exercise, AdjustType, MuscleGroup, PlanExercise, PlanReasoning, SessionDetailResponse, TemporaryPlanResponse } from '../types'
 import { adjustPlan, classifyApiError, generatePlan, getTrainingHistory, getTrainingSession, getTodayCheckIn } from '../services/api'
-import { CoachCopy, useAppLanguage, useCoachCopy } from '../copy/coachCopy'
+import { CoachCopy, useCoachCopy } from '../copy/coachCopy'
 import { LEGACY_PLAN_DRAFT_PREFIX, PLAN_DRAFT_PREFIX } from '../utils/storageKeys'
 import { formatLocalDate, readPlanDraft } from '../utils/planDrafts'
 import ReasoningPanel from '../components/ReasoningPanel'
@@ -28,32 +28,13 @@ const ADJUST_OPTIONS: Array<{ id: AdjustType; icon: string }> = [
 ]
 const PLAN_DRAFT_VERSION = 2
 
-// Mini reasoning thoughts per adjust type
-const ADJUST_THOUGHTS: Record<string, { zh: string[]; en: string[] }> = {
-  low_energy: {
-    zh: ['🛌 检测到今日状态偏低…', '📉 降低训练容量和强度…', '✅ 保留核心动作，减少疲劳…'],
-    en: ['🛌 Low energy detected…', '📉 Reducing volume and intensity…', '✅ Keeping essentials, cutting fatigue…'],
-  },
-  high_intensity: {
-    zh: ['⚡ 状态良好，可以冲击…', '📈 提升组数和重量建议…', '✅ 安全范围内最大化训练效果…'],
-    en: ['⚡ Strong energy detected…', '📈 Increasing sets and weight targets…', '✅ Maximizing output within safe range…'],
-  },
-  short_time: {
-    zh: ['⏱ 时间有限，精简方案…', '🎯 保留最高效动作…', '✅ 浓缩训练，不妥协效果…'],
-    en: ['⏱ Limited time detected…', '🎯 Keeping highest-impact moves…', '✅ Condensed session, full effectiveness…'],
-  },
-  swap: {
-    zh: ['🔄 分析已选动作的替代方案…', '🎯 匹配相近肌群和强度…', '✅ 替换完成，保持训练目标…'],
-    en: ['🔄 Analyzing alternatives for selected moves…', '🎯 Matching muscle group and intensity…', '✅ Swapped — goal maintained…'],
-  },
-  custom: {
-    zh: ['🤔 理解自定义调整需求…', '🎯 按需重新规划…', '✅ 计划已根据需求调整…'],
-    en: ['🤔 Understanding custom request…', '🎯 Replanning accordingly…', '✅ Plan adjusted to your request…'],
-  },
-  default: {
-    zh: ['🤔 重新分析训练需求…', '🎯 调整训练参数…', '✅ 优化计划中…'],
-    en: ['🤔 Re-analyzing training needs…', '🎯 Adjusting parameters…', '✅ Optimizing plan…'],
-  },
+const ADJUST_THOUGHTS: Record<string, string[]> = {
+  low_energy: ['🛌 Low energy detected...', '📉 Reducing volume and intensity...', '✅ Keeping essentials, cutting fatigue...'],
+  high_intensity: ['⚡ Strong energy detected...', '📈 Increasing sets and weight targets...', '✅ Maximizing output within safe range...'],
+  short_time: ['⏱ Limited time detected...', '🎯 Keeping highest-impact moves...', '✅ Condensed session, full effectiveness...'],
+  swap: ['🔄 Analyzing alternatives for selected moves...', '🎯 Matching muscle group and intensity...', '✅ Swapped. Goal maintained...'],
+  custom: ['🤔 Understanding custom request...', '🎯 Replanning accordingly...', '✅ Plan adjusted to your request...'],
+  default: ['🤔 Re-analyzing training needs...', '🎯 Adjusting parameters...', '✅ Optimizing plan...'],
 }
 
 function isMuscleGroup(value: string | null): value is MuscleGroup {
@@ -194,8 +175,8 @@ function ExerciseItem({
 // Error state.
 
 function errorIcon(msg: string) {
-  if (msg.includes('网络') || msg.includes('network') || msg.includes('No network')) return '📶'
-  if (msg.includes('频繁') || msg.includes('Too many')) return '⏳'
+  if (msg.includes('network') || msg.includes('No network')) return '📶'
+  if (msg.includes('Too many')) return '⏳'
   return '⚠️'
 }
 
@@ -325,7 +306,7 @@ export default function PlanPage() {
       }
     } catch (err) {
       if ((err as Error).name === 'AbortError') return
-      setErrorMsg(classifyApiError(err, lang, coachCopy.plan.generationFailed))
+      setErrorMsg(classifyApiError(err, coachCopy.plan.generationFailed))
       setStatus('error')
     }
   }
@@ -367,7 +348,7 @@ export default function PlanPage() {
     setAdjustText('')
     // Set mini-reasoning thoughts for this adjust type
     const thoughtSet = ADJUST_THOUGHTS[adjustType] ?? ADJUST_THOUGHTS.default
-    setAdjustThoughts(thoughtSet[lang])
+    setAdjustThoughts(thoughtSet)
     setAdjustThoughtIndex(0)
     setAdjustThoughtVisible(true)
     setIsAdjusting(true)
@@ -440,10 +421,6 @@ export default function PlanPage() {
     )
   }
 
-  const rawLang = useAppLanguage()
-  const lang: 'zh' | 'en' = rawLang === 'zh-CN' ? 'zh' : 'en'
-
-  // Cycle through adjustThoughts while isAdjusting
   useEffect(() => {
     if (!isAdjusting || adjustThoughts.length === 0) return
     const show = setTimeout(() => setAdjustThoughtVisible(false), 820)

@@ -19,68 +19,51 @@ import {
 } from '../types'
 import { AuthUser } from '../context/AuthContext'
 import { clearPlanDrafts } from '../utils/planDrafts'
-import { resolveAppLanguage } from '../copy/coachCopy'
 import { LEGACY_USER_STORAGE_KEY, USER_STORAGE_KEY } from '../utils/storageKeys'
 
 const BASE = import.meta.env.VITE_API_BASE_URL || '/api'
 const TOKEN_KEY = 'token'
 
-/**
- * Classify a caught error into a user-facing message.
- * Keeps all error-string logic in one place so pages stay clean.
- */
-export function classifyApiError(err: unknown, lang: 'zh' | 'en', fallback?: string): string {
+export function classifyApiError(err: unknown, fallback?: string): string {
   const e = err as Error
-  if (e.name === 'AbortError') return ''   // caller should handle silently
+  if (e.name === 'AbortError') return ''
 
-  // Network / no connection
   if (e.name === 'TypeError' && e.message.toLowerCase().includes('failed to fetch')) {
-    return lang === 'zh' ? '网络连接失败，请检查网络后重试' : 'No network connection — please check and retry'
+    return 'No network connection. Please check and retry.'
   }
 
-  // Server returned a structured error message (from apiFetch throw)
-  if (e.message && !e.message.includes('请求失败') && !e.message.includes('Request failed')) {
-    // Rate limit
-    if (e.message.includes('Too many requests') || e.message.includes('太频繁') || e.message.includes('429')) {
-      return lang === 'zh' ? '请求太频繁，请稍后再试' : 'Too many requests — please wait a moment'
+  if (e.message && !e.message.includes('Request failed')) {
+    if (e.message.includes('Too many requests') || e.message.includes('429')) {
+      return 'Too many requests. Please wait a moment.'
     }
-    // Auth errors
     if (e.message.includes('Email already registered')) {
-      return lang === 'zh' ? '该邮箱已注册' : 'Email already registered'
+      return 'Email already registered'
     }
     if (e.message.includes('Incorrect email or password')) {
-      return lang === 'zh' ? '邮箱或密码错误' : 'Incorrect email or password'
+      return 'Incorrect email or password'
     }
     if (e.message.includes('Password must be at least')) {
-      return lang === 'zh' ? '密码不能少于 6 位' : e.message
+      return e.message
     }
     if (e.message.includes('valid email')) {
-      return lang === 'zh' ? '请输入有效的邮箱地址' : e.message
+      return e.message
     }
-    // Session / auth
     if (e.message.includes('User not found') || e.message.includes('session expired')) {
-      return lang === 'zh' ? '登录已失效，请重新登录' : 'Session expired — please log in again'
+      return 'Session expired. Please log in again.'
     }
-    // AI generation failures
     if (e.message.includes('Failed to generate plan')) {
-      return lang === 'zh' ? '计划生成失败，请稍后重试' : 'Failed to generate plan. Please try again.'
+      return 'Failed to generate plan. Please try again.'
     }
     if (e.message.includes('Failed to adjust plan')) {
-      return lang === 'zh' ? '训练计划调整失败，请稍后重试' : 'Failed to adjust plan. Please try again.'
+      return 'Failed to adjust plan. Please try again.'
     }
     if (e.message.includes('Failed to generate nutrition')) {
-      return lang === 'zh' ? '营养建议生成失败，请稍后重试' : 'Failed to generate nutrition advice. Please try again.'
+      return 'Failed to generate nutrition advice. Please try again.'
     }
-    // Don't leak Chinese error text in English mode
-    const hasChinese = /[一-鿿]/.test(e.message)
-    if (!hasChinese || lang === 'zh') return e.message
+    return e.message
   }
 
-  return fallback ?? (lang === 'zh' ? '请求失败，请稍后重试' : 'Request failed — please try again')
-}
-
-function getAppLanguage() {
-  return resolveAppLanguage()
+  return fallback ?? 'Request failed. Please try again.'
 }
 
 interface AuthResponse {
@@ -94,7 +77,7 @@ async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> 
     ...options,
     headers: {
       'Content-Type': 'application/json',
-      'Accept-Language': getAppLanguage(),
+      'Accept-Language': 'en-US',
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...options.headers,
     },
@@ -108,7 +91,7 @@ async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> 
       localStorage.removeItem(LEGACY_USER_STORAGE_KEY)
       clearPlanDrafts()
     }
-    throw new Error(data?.error || (getAppLanguage() === 'en-US' ? 'Request failed' : '请求失败'))
+    throw new Error(data?.error || 'Request failed')
   }
   return data as T
 }

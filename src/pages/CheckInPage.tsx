@@ -3,12 +3,9 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { getTodayCheckIn, submitCheckIn } from '../services/api'
 import { CheckInResponse, RecoveryStatus } from '../types'
-import { useAppLanguage } from '../copy/coachCopy'
 import BackButton from '../components/BackButton'
 import { CHECKIN_FULL_CACHE_KEY } from '../utils/storageKeys'
 import { formatLocalDate } from '../utils/planDrafts'
-
-// ── Full check-in cache (today only) ─────────────────────────────────────────
 
 interface FullCheckinCache { date: string; checkin: CheckInResponse }
 
@@ -33,78 +30,39 @@ function clearCheckinCache() {
   try { localStorage.removeItem(CHECKIN_FULL_CACHE_KEY) } catch { /* ignore */ }
 }
 
-// ── Copy ──────────────────────────────────────────────────────────────────────
-
 const COPY = {
-  zh: {
-    title: '每日状态',
-    subtitle: '帮助 AI 更好地为你制定今天的训练计划',
-    sleep: '睡眠时长',
-    sleepUnit: '小时',
-    energy: '精力水平',
-    stress: '压力水平',
-    weight: '体重（可选）',
-    weightPlaceholder: '今日体重 kg',
-    notes: '备注（可选）',
-    notesPlaceholder: '身体感受、特殊情况…',
-    submit: '提交状态',
-    submitting: '分析中…',
-    alreadyDone: '今日已打卡',
-    resubmit: '重新填写',
-    low: '低',
-    high: '高',
-    recoveryLabel: '恢复指数',
-    status: {
-      excellent: { label: '状态极佳', color: '#57C878', bg: 'rgba(87,200,120,0.08)', border: 'rgba(87,200,120,0.25)' },
-      good:      { label: '恢复良好', color: '#7AB8A0', bg: 'rgba(122,184,160,0.08)', border: 'rgba(122,184,160,0.25)' },
-      moderate:  { label: '一般状态', color: '#C8A96E', bg: 'rgba(200,169,110,0.08)', border: 'rgba(200,169,110,0.25)' },
-      low:       { label: '恢复不足', color: '#B8935A', bg: 'rgba(184,147,90,0.08)', border: 'rgba(184,147,90,0.25)' },
-      poor:      { label: '需要休息', color: '#C07878', bg: 'rgba(192,120,120,0.08)', border: 'rgba(192,120,120,0.25)' },
-    },
-    hint: {
-      excellent: '很好的训练日，可以挑战今天的目标。',
-      good: '状态不错，正常训练即可。',
-      moderate: '注意调节强度，避免过度疲劳。',
-      low: '建议降低训练量，优先保证恢复。',
-      poor: '今天适合休息或轻量活动。',
-    },
+  title: 'Daily Check-In',
+  subtitle: 'Help the AI tailor your training for today',
+  sleep: 'Sleep Duration',
+  sleepUnit: 'hours',
+  energy: 'Energy Level',
+  stress: 'Stress Level',
+  weight: 'Weight (optional)',
+  weightPlaceholder: "Today's weight in kg",
+  notes: 'Notes (optional)',
+  notesPlaceholder: 'How you feel, anything unusual...',
+  submit: 'Submit',
+  submitting: 'Analyzing...',
+  alreadyDone: 'Already checked in today',
+  resubmit: 'Update',
+  low: 'Low',
+  high: 'High',
+  recoveryLabel: 'Recovery Score',
+  status: {
+    excellent: { label: 'Peak Condition', color: '#57C878', bg: 'rgba(87,200,120,0.08)', border: 'rgba(87,200,120,0.25)' },
+    good:      { label: 'Good Recovery', color: '#7AB8A0', bg: 'rgba(122,184,160,0.08)', border: 'rgba(122,184,160,0.25)' },
+    moderate:  { label: 'Moderate', color: '#C8A96E', bg: 'rgba(200,169,110,0.08)', border: 'rgba(200,169,110,0.25)' },
+    low:       { label: 'Low Recovery', color: '#B8935A', bg: 'rgba(184,147,90,0.08)', border: 'rgba(184,147,90,0.25)' },
+    poor:      { label: 'Rest Needed', color: '#C07878', bg: 'rgba(192,120,120,0.08)', border: 'rgba(192,120,120,0.25)' },
   },
-  en: {
-    title: 'Daily Check-In',
-    subtitle: 'Help the AI tailor your training for today',
-    sleep: 'Sleep Duration',
-    sleepUnit: 'hours',
-    energy: 'Energy Level',
-    stress: 'Stress Level',
-    weight: 'Weight (optional)',
-    weightPlaceholder: 'Today\'s weight in kg',
-    notes: 'Notes (optional)',
-    notesPlaceholder: 'How you feel, anything unusual…',
-    submit: 'Submit',
-    submitting: 'Analyzing…',
-    alreadyDone: 'Already checked in today',
-    resubmit: 'Update',
-    low: 'Low',
-    high: 'High',
-    recoveryLabel: 'Recovery Score',
-    status: {
-      excellent: { label: 'Peak Condition', color: '#57C878', bg: 'rgba(87,200,120,0.08)', border: 'rgba(87,200,120,0.25)' },
-      good:      { label: 'Good Recovery', color: '#7AB8A0', bg: 'rgba(122,184,160,0.08)', border: 'rgba(122,184,160,0.25)' },
-      moderate:  { label: 'Moderate', color: '#C8A96E', bg: 'rgba(200,169,110,0.08)', border: 'rgba(200,169,110,0.25)' },
-      low:       { label: 'Low Recovery', color: '#B8935A', bg: 'rgba(184,147,90,0.08)', border: 'rgba(184,147,90,0.25)' },
-      poor:      { label: 'Rest Needed', color: '#C07878', bg: 'rgba(192,120,120,0.08)', border: 'rgba(192,120,120,0.25)' },
-    },
-    hint: {
-      excellent: 'Great day to push hard and hit your goals.',
-      good: 'You\'re ready. Train as planned.',
-      moderate: 'Consider moderating intensity to avoid fatigue.',
-      low: 'Reduce volume. Prioritize recovery today.',
-      poor: 'Rest or light activity recommended.',
-    },
+  hint: {
+    excellent: 'Great day to push hard and hit your goals.',
+    good: "You're ready. Train as planned.",
+    moderate: 'Consider moderating intensity to avoid fatigue.',
+    low: 'Reduce volume. Prioritize recovery today.',
+    poor: 'Rest or light activity recommended.',
   },
 }
-
-// ── Slider component ──────────────────────────────────────────────────────────
 
 function SliderInput({
   value,
@@ -162,10 +120,8 @@ function SliderInput({
   )
 }
 
-// ── Recovery Result Card ──────────────────────────────────────────────────────
-
-function RecoveryCard({ result, lang }: { result: CheckInResponse; lang: 'zh' | 'en' }) {
-  const copy = COPY[lang]
+function RecoveryCard({ result }: { result: CheckInResponse }) {
+  const copy = COPY
   const style = copy.status[result.recovery_status as RecoveryStatus]
   const hint = copy.hint[result.recovery_status as RecoveryStatus]
 
@@ -177,7 +133,6 @@ function RecoveryCard({ result, lang }: { result: CheckInResponse; lang: 'zh' | 
       className="rounded-2xl p-5 space-y-4"
       style={{ background: style.bg, border: `1px solid ${style.border}` }}
     >
-      {/* Score ring */}
       <div className="flex items-center gap-4">
         <div className="relative w-16 h-16 flex-shrink-0">
           <svg viewBox="0 0 56 56" className="w-full h-full -rotate-90">
@@ -206,18 +161,16 @@ function RecoveryCard({ result, lang }: { result: CheckInResponse; lang: 'zh' | 
         </div>
       </div>
 
-      {/* Hint */}
       <p className="text-[12px] font-light leading-relaxed" style={{ color: 'rgba(26,24,20,0.55)' }}>
         <span style={{ color: style.color, marginRight: 6 }}>✦</span>
         {hint}
       </p>
 
-      {/* Stats row */}
       <div className="grid grid-cols-3 gap-2 pt-1">
         {[
-          { label: lang === 'zh' ? '睡眠' : 'Sleep', value: `${result.sleep_hours}h` },
-          { label: lang === 'zh' ? '精力' : 'Energy', value: `${result.energy_level}/10` },
-          { label: lang === 'zh' ? '压力' : 'Stress', value: `${result.stress_level}/10` },
+          { label: 'Sleep', value: `${result.sleep_hours}h` },
+          { label: 'Energy', value: `${result.energy_level}/10` },
+          { label: 'Stress', value: `${result.stress_level}/10` },
         ].map(({ label, value }) => (
           <div
             key={label}
@@ -233,17 +186,12 @@ function RecoveryCard({ result, lang }: { result: CheckInResponse; lang: 'zh' | 
   )
 }
 
-// ── Main Page ─────────────────────────────────────────────────────────────────
-
 export default function CheckInPage() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const redirectTo = searchParams.get('redirect') || '/plan'
-  const rawLang = useAppLanguage()
-  const lang: 'zh' | 'en' = rawLang === 'zh-CN' ? 'zh' : 'en'
-  const copy = COPY[lang]
+  const copy = COPY
 
-  // Initialise from cache — if today already checked in, skip the form immediately
   const cached = readCheckinCache()
 
   const [sleepHours, setSleepHours] = useState(cached?.sleep_hours ?? 7)
@@ -256,7 +204,6 @@ export default function CheckInPage() {
   const [result, setResult] = useState<CheckInResponse | null>(cached)
   const [alreadyDone, setAlreadyDone] = useState(Boolean(cached))
 
-  // Always refresh from API in background to get the freshest data
   useEffect(() => {
     getTodayCheckIn().then((res) => {
       if (res.exists && res.checkin) {
@@ -268,10 +215,9 @@ export default function CheckInPage() {
         setStressLevel(c.stress_level)
         setWeightKg(c.weight_kg?.toString() ?? '')
         setNotes(c.notes ?? '')
-        setStatus((s) => s === 'idle' ? 'done' : s)  // don't override if user is editing
+        setStatus((s) => s === 'idle' ? 'done' : s)
         writeCheckinCache(c)
       } else {
-        // Not checked in today — clear any stale cache
         clearCheckinCache()
       }
     }).catch(() => {/* ignore */})
@@ -299,7 +245,6 @@ export default function CheckInPage() {
 
   return (
     <div className="min-h-screen flex flex-col" style={{ background: '#FAFAF8', color: '#1A1814' }}>
-      {/* Header */}
       <div className="flex items-center gap-3 px-5 pt-14 pb-4 flex-shrink-0">
         <BackButton />
         <div>
@@ -311,7 +256,6 @@ export default function CheckInPage() {
       </div>
 
       <div className="flex-1 overflow-y-auto px-5 pb-10 space-y-5">
-        {/* Already done banner */}
         <AnimatePresence>
           {alreadyDone && status === 'done' && (
             <motion.div
@@ -334,14 +278,12 @@ export default function CheckInPage() {
           )}
         </AnimatePresence>
 
-        {/* Recovery result */}
         <AnimatePresence>
           {status === 'done' && result && (
-            <RecoveryCard result={result} lang={lang} />
+            <RecoveryCard result={result} />
           )}
         </AnimatePresence>
 
-        {/* Form */}
         <AnimatePresence>
           {status !== 'done' && (
             <motion.div
@@ -351,7 +293,6 @@ export default function CheckInPage() {
               exit={{ opacity: 0 }}
               className="space-y-5"
             >
-              {/* Sleep */}
               <div
                 className="rounded-2xl p-4 space-y-3"
                 style={{ background: '#FFFFFF', border: '1px solid rgba(26,24,20,0.07)', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}
@@ -373,7 +314,6 @@ export default function CheckInPage() {
                 />
               </div>
 
-              {/* Energy */}
               <div
                 className="rounded-2xl p-4 space-y-3"
                 style={{ background: '#FFFFFF', border: '1px solid rgba(26,24,20,0.07)', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}
@@ -390,7 +330,6 @@ export default function CheckInPage() {
                 />
               </div>
 
-              {/* Stress */}
               <div
                 className="rounded-2xl p-4 space-y-3"
                 style={{ background: '#FFFFFF', border: '1px solid rgba(26,24,20,0.07)', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}
@@ -407,7 +346,6 @@ export default function CheckInPage() {
                 />
               </div>
 
-              {/* Weight */}
               <div
                 className="rounded-2xl p-4 space-y-2"
                 style={{ background: '#FFFFFF', border: '1px solid rgba(26,24,20,0.07)', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}
@@ -425,7 +363,6 @@ export default function CheckInPage() {
                 />
               </div>
 
-              {/* Notes */}
               <div
                 className="rounded-2xl p-4 space-y-2"
                 style={{ background: '#FFFFFF', border: '1px solid rgba(26,24,20,0.07)', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}
@@ -441,7 +378,6 @@ export default function CheckInPage() {
                 />
               </div>
 
-              {/* Submit */}
               <motion.button
                 className="w-full rounded-2xl py-4 text-[14px] font-light tracking-wider"
                 style={{
@@ -459,7 +395,6 @@ export default function CheckInPage() {
           )}
         </AnimatePresence>
 
-        {/* After done: option to go to plan */}
         <AnimatePresence>
           {status === 'done' && (
             <motion.button
@@ -475,7 +410,7 @@ export default function CheckInPage() {
               whileTap={{ scale: 0.97 }}
               onClick={() => navigate(redirectTo)}
             >
-              {lang === 'zh' ? '开始制定今日计划 →' : 'Generate Today\'s Plan →'}
+              Generate Today's Plan →
             </motion.button>
           )}
         </AnimatePresence>

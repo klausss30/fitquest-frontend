@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import { DayData, DayStatus, TrainingSession, WeekPlanDay } from '../types'
 import { getTodayCheckIn, getWeekPlan, getWeekSessions } from '../services/api'
-import { CoachCopy, useAppLanguage, useCoachCopy } from '../copy/coachCopy'
+import { CoachCopy, useCoachCopy } from '../copy/coachCopy'
 import { useAuth } from '../context/AuthContext'
 import { readWeekPlanCache, writeWeekPlanCache } from '../utils/weekPlanCache'
 import WorkoutCoachIcon from '../components/coach/WorkoutCoachIcon'
@@ -191,7 +191,6 @@ function LevelNode({ day, index, coachCopy, onClick }: { day: DayData; index: nu
 export default function WeekPage() {
   const navigate = useNavigate()
   const coachCopy = useCoachCopy()
-  const appLanguage = useAppLanguage()
   const { user } = useAuth()
   const todayRef = useRef<HTMLDivElement | null>(null)
   const [sessions, setSessions] = useState<TrainingSession[]>([])
@@ -207,7 +206,7 @@ export default function WeekPage() {
 
     setSessionsLoaded(false)
     const weekStart = formatDateKey(getWeekStart(new Date()))
-    const cachedPlan = readWeekPlanCache(user.id, weekStart, appLanguage)
+    const cachedPlan = readWeekPlanCache(user.id, weekStart)
 
     setError('')
 
@@ -232,12 +231,12 @@ export default function WeekPage() {
         }
         if (planResult.status === 'fulfilled') {
           setWeekPlanDays(planResult.value.days)
-          writeWeekPlanCache(user.id, appLanguage, planResult.value)
+          writeWeekPlanCache(user.id, planResult.value)
         }
         setSessionsLoaded(true)
       })
     }
-  }, [appLanguage, user])
+  }, [user])
 
   const todayKey = formatDateKey(new Date())
   const sessionByDate = new Map(sessions.map((session) => [session.session_date, session]))

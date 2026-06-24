@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { useAppLanguage, useCoachCopy } from '../copy/coachCopy'
+import { useCoachCopy } from '../copy/coachCopy'
 import { getStats, getTodayCheckIn } from '../services/api'
 import { RecoveryStatus, StatsResponse } from '../types'
 import { CHECKIN_CACHE_KEY, STATS_CACHE_KEY } from '../utils/storageKeys'
@@ -81,7 +81,7 @@ function MiniBubble({ label, sublabel, top, bottom, left, right, size, delay, on
 
 interface CheckInCache { score: number; status: RecoveryStatus }
 
-function CheckInBubble({ delay, lang }: { delay: number; lang: 'zh' | 'en' }) {
+function CheckInBubble({ delay }: { delay: number }) {
   const navigate = useNavigate()
 
   // Render cached value immediately — no delay on repeat visits
@@ -108,7 +108,7 @@ function CheckInBubble({ delay, lang }: { delay: number; lang: 'zh' | 'en' }) {
   }, [])
 
   const accentColor = status ? RECOVERY_COLOR[status] : undefined
-  const label = score !== null ? `${score}` : lang === 'zh' ? '打卡' : 'Check'
+  const label = score !== null ? `${score}` : 'Check'
 
   return (
     <div className="absolute" style={{ top: '22px', left: '12px' }}>
@@ -139,7 +139,7 @@ function CheckInBubble({ delay, lang }: { delay: number; lang: 'zh' | 'en' }) {
           <>
             <span className="text-[14px] font-light leading-none">{score}</span>
             <span className="text-[8px] font-light leading-none" style={{ color: 'rgba(26,24,20,0.32)' }}>
-              {lang === 'zh' ? '状态' : 'status'}
+              status
             </span>
           </>
         ) : (
@@ -153,24 +153,16 @@ function CheckInBubble({ delay, lang }: { delay: number; lang: 'zh' | 'en' }) {
 // ── Stats strip ───────────────────────────────────────────────────────────────
 
 const COPY = {
-  zh: {
-    streak:      (n: number) => `🔥 ${n} 天`,
-    streakLabel: '连续',
-    week:        (n: number) => `${n}`,
-    weekLabel:   '本周',
-  },
-  en: {
-    streak:      (n: number) => `🔥 ${n}d`,
-    streakLabel: 'streak',
-    week:        (n: number) => `${n}`,
-    weekLabel:   'this wk',
-  },
+  streak: (n: number) => `🔥 ${n}d`,
+  streakLabel: 'streak',
+  week: (n: number) => `${n}`,
+  weekLabel: 'this wk',
 }
 
-function StatsStrip({ lang }: { lang: 'zh' | 'en' }) {
+function StatsStrip() {
   // Render cached stats immediately — API refresh happens silently in background
   const [stats, setStats] = useState<StatsResponse | null>(() => readCache<StatsResponse>(STATS_CACHE_KEY))
-  const copy = COPY[lang]
+  const copy = COPY
 
   useEffect(() => {
     getStats()
@@ -221,8 +213,6 @@ function StatsStrip({ lang }: { lang: 'zh' | 'en' }) {
 export default function HomePage() {
   const navigate  = useNavigate()
   const coachCopy = useCoachCopy()
-  const rawLang   = useAppLanguage()
-  const lang: 'zh' | 'en' = rawLang === 'zh-CN' ? 'zh' : 'en'
 
   return (
     <div className="relative min-h-screen overflow-hidden px-6 select-none" style={{ background: '#F7FBF4', color: '#1A1814' }}>
@@ -251,7 +241,7 @@ export default function HomePage() {
               transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
             />
             <span className="text-[11px] font-light tracking-[0.16em] uppercase" style={{ color: 'rgba(26,24,20,0.38)' }}>
-              {lang === 'zh' ? 'Reasoning Agent' : 'Reasoning Agent'}
+              Reasoning Agent
             </span>
           </div>
         </motion.div>
@@ -259,7 +249,7 @@ export default function HomePage() {
         <div className="relative" style={{ width: 300, height: 300 }}>
 
           {/* Check-In bubble — top left, shows recovery score instantly from cache */}
-          <CheckInBubble delay={0.12} lang={lang} />
+          <CheckInBubble delay={0.12} />
 
           {/* Records — top right */}
           <MiniBubble
@@ -272,8 +262,8 @@ export default function HomePage() {
 
           {/* Nutrition — bottom left */}
           <MiniBubble
-            label={lang === 'zh' ? '营养' : 'Nutrition'}
-            sublabel={lang === 'zh' ? '饮食' : 'Meal Plan'}
+            label="Nutrition"
+            sublabel="Meal Plan"
             size={62}
             bottom="18px" left="8px"
             delay={0.28}
@@ -283,7 +273,7 @@ export default function HomePage() {
 
           {/* Settings — bottom right */}
           <MiniBubble
-            label={lang === 'zh' ? '设置' : 'Settings'}
+            label="Settings"
             size={62}
             bottom="18px" right="8px"
             delay={0.34}
@@ -323,7 +313,7 @@ export default function HomePage() {
         </div>
 
         {/* Stats strip — instant on repeat visits (localStorage cache) */}
-        <StatsStrip lang={lang} />
+        <StatsStrip />
 
       </div>
     </div>
